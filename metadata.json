@@ -1,0 +1,6 @@
+{
+  "name": "IT System Architecture & Cloud Strategy Advisor",
+  "description": "ระบบวางแผน ออกแบบโครงสร้างพื้นฐาน IT และกลยุทธ์ระบบ Cloud, Microservices แนะนำการแก้ไขปัญหาคอขวด (Bottleneck) และความปลอดภัย ด้วยพลัง AI",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
