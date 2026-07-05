@@ -90,9 +90,8 @@ export default function TopologyBoard({
   const numColumns = 5;
   const colWidth = dimensions.width / numColumns;
 
-  Object.keys(columns).forEach((colStr) => {
-    const colIndex = parseInt(colStr);
-    const colNodes = columns[colIndex];
+  [0, 1, 2, 3, 4].forEach((colIndex) => {
+    const colNodes = columns[colIndex] || [];
     const numNodes = colNodes.length;
 
     colNodes.forEach((node, rowIndex) => {

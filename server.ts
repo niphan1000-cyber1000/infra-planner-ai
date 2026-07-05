@@ -3,13 +3,77 @@ import path from "path";
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
 import { createServer as createViteServer } from "vite";
+import rateLimit from "express-rate-limit";
 
 dotenv.config();
 
 const app = express();
 const PORT = 3000;
 
+// Configure Rate Limiting to prevent brute-forcing/DOS of LLM endpoints
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 50, // Limit each IP to 50 requests per 15 minutes
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: "คุณส่งคำขอมากเกินไปในระบบกรุณารอ 15 นาทีก่อนลองใหม่อีกครั้ง",
+  },
+});
+
+// JSON parsing middleware
 app.use(express.json());
+
+// Apply rate limiter to all API routes
+app.use("/api/", apiLimiter);
+
+// Input Sanitization helper to neutralize Prompt Injections
+const sanitizeInput = (text: string, maxLength = 1000): string => {
+  if (typeof text !== "string") return "";
+  let sanitized = text.trim().slice(0, maxLength);
+  
+  // Neutralize common prompt injection instructions and pattern bypasses
+  const forbiddenPatterns = [
+    /system instruction/gi,
+    /ignore previous/gi,
+    /ignore instructions/gi,
+    /you are now/gi,
+    /system override/gi,
+    /override rule/gi,
+    /translate to/gi,
+    /คุณคือ/gi,
+    /เปลี่ยนสวมบทบาท/gi,
+    /จงเพิกเฉย/gi
+  ];
+  
+  for (const pattern of forbiddenPatterns) {
+    sanitized = sanitized.replace(pattern, "[redacted]");
+  }
+  
+  // Clean potential HTML or dangerous block wrapper injections
+  sanitized = sanitized.replace(/<[^>]*>?/gm, "");
+  
+  return sanitized;
+};
+
+// Safe JSON Parsing helper to clean up Markdown-wrapped outputs from Gemini
+const parseGeminiJson = (text: string | undefined | null) => {
+  if (!text) return {};
+  let cleaned = text.trim();
+  
+  // Remove markdown block backticks if present
+  if (cleaned.startsWith("```")) {
+    cleaned = cleaned.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+  }
+  cleaned = cleaned.trim();
+  
+  try {
+    return JSON.parse(cleaned);
+  } catch (err) {
+    console.error("Critical: Failed to parse Gemini response as JSON. Raw text:", text);
+    throw new Error("Invalid response format received from AI");
+  }
+};
 
 // Initialize Gemini API client safely
 const getGeminiClient = () => {
@@ -35,17 +99,45 @@ app.get("/api/health", (req, res) => {
 // API: Design IT Architecture & Cloud Strategy
 app.post("/api/analyze-architecture", async (req, res) => {
   try {
-    const {
-      businessType,
-      userVolume,
-      compliance,
-      budget,
-      cloudPreference,
-      existingTech,
-      extraDescription,
-      itGoal,
-      riskFocus,
-    } = req.body;
+    // Extract and sanitize inputs to prevent prompt injection
+    const businessType = sanitizeInput(req.body.businessType, 100);
+    const userVolume = sanitizeInput(req.body.userVolume, 20);
+    const budget = sanitizeInput(req.body.budget, 20);
+    const cloudPreference = sanitizeInput(req.body.cloudPreference, 20);
+    const existingTech = sanitizeInput(req.body.existingTech, 500);
+    const extraDescription = sanitizeInput(req.body.extraDescription, 1000);
+    const itGoal = sanitizeInput(req.body.itGoal, 20);
+    const riskFocus = sanitizeInput(req.body.riskFocus, 20);
+
+    const rawCompliance = Array.isArray(req.body.compliance) ? req.body.compliance : [];
+    const compliance = rawCompliance
+      .map((c: any) => sanitizeInput(String(c), 15))
+      .filter((c: string) => ["PDPA", "HIPAA", "PCI-DSS", "GDPR"].includes(c));
+
+    // Input Validation
+    if (!businessType) {
+      return res.status(400).json({ error: "โปรดระบุประเภทธุรกิจที่ถูกต้อง" });
+    }
+    const validUserVolumes = ["low", "medium", "high", "extreme"];
+    if (!validUserVolumes.includes(userVolume)) {
+      return res.status(400).json({ error: "โปรดเลือกปริมาณผู้ใช้งานที่ถูกต้อง" });
+    }
+    const validBudgets = ["low", "balanced", "unlimited"];
+    if (!validBudgets.includes(budget)) {
+      return res.status(400).json({ error: "โปรดเลือกงบประมาณที่ถูกต้อง" });
+    }
+    const validCloudPrefs = ["aws", "azure", "gcp", "hybrid", "on-premise"];
+    if (!validCloudPrefs.includes(cloudPreference)) {
+      return res.status(400).json({ error: "โปรดเลือกรูปแบบคลาวด์ที่ถูกต้อง" });
+    }
+    const validGoals = ["modernize", "greenfield", "security", "cost"];
+    if (!validGoals.includes(itGoal)) {
+      return res.status(400).json({ error: "โปรดเลือกเป้าหมายไอทีที่ถูกต้อง" });
+    }
+    const validRisks = ["standard", "strict", "zero_trust"];
+    if (!validRisks.includes(riskFocus)) {
+      return res.status(400).json({ error: "โปรดเลือกการบริหารความเสี่ยงที่ถูกต้อง" });
+    }
 
     const ai = getGeminiClient();
 
@@ -69,31 +161,19 @@ app.post("/api/analyze-architecture", async (req, res) => {
     // Construct prompt
     const prompt = `
 คุณเป็นที่ปรึกษาสถาปัตยกรรมไอทีระดับองค์กร (Lead Enterprise IT Architect) และผู้เชี่ยวชาญด้านกลยุทธ์คลาวด์และการจัดการความเสี่ยงความมั่นคงปลอดภัยชั้นนำ
-จงออกแบบสถาปัตยกรรมระบบไอที วางกลยุทธ์ด้าน IT และวางมาตรการบริหารความเสี่ยงสำหรับธุรกิจและเงื่อนไขต่อไปนี้อย่างมืออาชีพ:
-
+จงออกแบบและวางแผนสถาปัตยกรรมระบบไอที (Enterprise IT Architecture) สำหรับธุรกิจดังต่อไปนี้:
 - ประเภทธุรกิจ: ${businessType}
-- เป้าหมายทางไอที/ธุรกิจหลัก: ${targetGoal}
-- มาตรการจัดการความเสี่ยงและความปลอดภัย: ${targetRisk}
-- ปริมาณผู้ใช้งานสูงสุดที่รองรับ: ${userVolume}
-- มาตรฐานความปลอดภัย/ความคุ้มครองข้อมูลที่จำเป็น: ${compliance.length > 0 ? compliance.join(", ") : "ไม่มีข้อกำหนดพิเศษ"}
-- ระดับงบประมาณ: ${budget}
-- รูปแบบคลาวด์ที่อยากใช้หรือพิจารณา: ${cloudPreference}
-- ระบบเดิมที่มีอยู่เดิม / เทคโนโลยีเดิม: ${existingTech || "ไม่มีระบบเดิม (Greenfield)"}
-- รายละเอียดหรือข้อกำหนดเพิ่มเติมจากผู้ใช้: ${extraDescription || "ไม่มีข้อกำหนดเพิ่มเติม"}
+- ปริมาณผู้ใช้งานที่คาดหวัง: ${userVolume}
+- ความต้องการด้าน Compliance และมาตรฐานที่จำเป็น: ${compliance.length > 0 ? compliance.join(", ") : "ไม่มีข้อกำหนดเฉพาะ"}
+- ระดับงบประมาณในการลงทุน: ${budget === 'low' ? 'ควบคุมต้นทุนอย่างเข้มงวด (Cost-focused)' : budget === 'balanced' ? 'สมดุลระหว่างความคุ้มค่าและประสิทธิภาพ (Value-driven)' : 'มุ่งเน้นประสิทธิภาพและนวัตกรรมโดยไม่จำกัดงบประมาณ (Enterprise-grade)'}
+- คลาวด์ที่ต้องการใช้งาน (Cloud Preference): ${cloudPreference}
+- ระบบไอทีเดิม (Legacy / On-Premise / Existing Systems): ${existingTech || "ไม่มีระบบเดิม"}
+- รายละเอียดข้อกำหนดเพิ่มเติม: ${extraDescription || "ไม่มีข้อกำหนดเพิ่มเติม"}
+- เป้าหมายไอทีสูงสุด (IT Goal): ${targetGoal}
+- ระดับการจัดการความเสี่ยง (Risk Focus): ${targetRisk}
 
-ข้อมูลที่ท่านต้องวิเคราะห์และให้คำปรึกษาเชิงลึกโดยละเอียดตามเป้าหมายขององค์กร:
-1. การวิเคราะห์และประเมินระบบ (System Analysis & Assessment):
-   - ประเมินสถานะและจุดอ่อนของระบบเดิม (หากมี) หรือสิ่งท้าทายหลักในการออกแบบระบบใหม่ให้เข้ากับเป้าหมายธุรกิจ
-   - วางขั้นตอนและแนวทางปรับปรุงระบบ (Improvement Path) ให้เข้ากับเป้าหมายทางธุรกิจ
-2. การวางกลยุทธ์ IT (IT Strategic Roadmap):
-   - แผนพัฒนาโครงสร้างพื้นฐานไอทีแบบเป็นขั้นเป็นตอน (Short-term, Mid-term, Long-term) เพื่อรองรับการขยายตัวและการเปลี่ยนแปลงในอนาคต (Future Growth & Adaptability)
-3. การจัดการความเสี่ยงและความปลอดภัย (Risk Management & Security Plan):
-   - การประเมินและระบุความเสี่ยงด้าน IT (Cyber threats, network downtime, database lock, data breaches)
-   - แผนป้องกันควบคุมระบบ (Security controls) รวมถึงแผนความต่อเนื่องทางธุรกิจและการสำรองข้อมูลกู้คืนระบบกรณีภัยพิบัติ (Disaster Recovery Plan RTO/RPO)
-
-ให้ตอบกลับในรูปแบบ JSON ตาม Schema ที่กำหนดไว้อย่างเคร่งครัด
-ข้อความอธิบายความรู้และคำตอบทั้งหมดต้องเป็นภาษาไทยที่สุภาพ มีน้ำหนัก น่าเชื่อถือ อธิบายเป็นรูปธรรม และมีความลึกซึ้งทางวิศวกรรมซอฟต์แวร์
-    `;
+ผลลัพธ์ที่ได้จะต้องตอบกลับมาในรูปแบบ JSON ตาม Schema ที่ระบุ โดยต้องมีข้อมูลสอดคล้องกัน มีภาษาไทยที่สละสลวย มีความเป็นมืออาชีพเชิงลึก มีแนวทางปฏิบัติได้จริง
+`;
 
     // Define response schema to match the frontend types cleanly
     const responseSchema = {
@@ -101,76 +181,76 @@ app.post("/api/analyze-architecture", async (req, res) => {
       properties: {
         executiveSummary: {
           type: Type.STRING,
-          description: "สรุปคำแนะนำผู้บริหาร สไตล์ที่ปรึกษาระดับแนวหน้า เน้นเป้าหมายธุรกิจควบคู่กับประสิทธิภาพไอทีและต้นทุนในระยะยาว อธิบายเป็นภาษาไทยเชิงลึก 2-3 ย่อหน้าย่อย",
+          description: "สรุปคำแนะนำผู้บริหาร สไตล์ที่ปรึกษาระดับสูง กระชับและทรงพลัง ภาษาไทย",
         },
         architectureStyle: {
           type: Type.STRING,
-          description: "สไตล์โครงสร้างสถาปัตยกรรม เช่น Microservices Architecture, Hybrid Cloud Integration, Serverless Event-Driven, Secure Monolithic",
+          description: "รูปแบบสถาปัตยกรรมหลัก เช่น Microservices, Event-Driven, Hybrid Cloud, Serverless, Monolithic Modernization",
         },
         hybridCloudStrategy: {
           type: Type.STRING,
-          description: "แผนกลยุทธ์การเชื่อมโยงระบบและข้อมูลและการใช้ประโยชน์ไฮบริดคลาวด์ เพื่อความคุ้มทุน ยืดหยุ่น และลดการผูกขาดกับผู้ให้บริการรายเดียว อธิบายภาษาไทย",
+          description: "แนวทางการบูรณาการกลยุทธ์ Hybrid Cloud หรือการรวมเทคโนโลยี On-Premise และ Cloud เข้าด้วยกันอย่างมีประสิทธิภาพ ภาษาไทย",
         },
         systemAnalysis: {
           type: Type.OBJECT,
-          description: "การวิเคราะห์และประเมินระบบเพื่อปรับปรุงหรือสร้างใหม่ให้ตรงเป้าหมายธุรกิจ",
+          description: "การวิเคราะห์ประเมินระบบอย่างลึกซึ้ง",
           properties: {
             legacyStatusAssessment: {
               type: Type.STRING,
-              description: "การประเมินวิเคราะห์สถาปัตยกรรมระบบเดิม ปัญหาหลัก เช่น คอขวดข้อมูล คลาวด์ลิงก์ หรือความเสี่ยงหากเป็นระบบเดิม และสิ่งที่ต้องระวังหากเป็นระบบ Greenfield อธิบายภาษาไทยเชิงลึก",
+              description: "การประเมินสถานะ ปัญหาคอขวด หรือความปลอดภัยของระบบ Legacy เดิม ภาษาไทย",
             },
             improvementPath: {
               type: Type.STRING,
-              description: "แนวทางและเฟสการปรับปรุงระบบเดิม หรือลำดับขั้นการพัฒนาไอทีให้ได้มาตรฐาน อธิบายภาษาไทยชัดเจน",
+              description: "ขั้นตอนเชิงปฏิบัติเพื่อการอัปเกรดหรือปรับปรุงระบบ ภาษาไทย",
             },
             businessGoalAlignment: {
               type: Type.STRING,
-              description: "อธิบายว่าสถาปัตยกรรมและโครงสร้างไอทีที่ออกแบบนี้ ตอบโจทย์เป้าหมายทางธุรกิจและความต้องการขององค์กรอย่างไรอย่างเป็นรูปธรรม อธิบายภาษาไทย",
-            }
+              description: "อธิบายว่าการดีไซน์นี้ตอบสนองเป้าหมายทางธุรกิจได้อย่างไร ภาษาไทย",
+            },
           },
-          required: ["legacyStatusAssessment", "improvementPath", "businessGoalAlignment"]
+          required: ["legacyStatusAssessment", "improvementPath", "businessGoalAlignment"],
         },
         itStrategyRoadmap: {
           type: Type.OBJECT,
-          description: "การวางกลยุทธ์ IT เพื่อรองรับการเติบโตและการเปลี่ยนแปลงในอนาคต",
+          description: "แผนกลยุทธ์และการเติบโตทางไอที",
           properties: {
             phase1ShortTerm: {
               type: Type.STRING,
-              description: "แผนยุทธศาสตร์ระยะสั้น (0-6 เดือน) เช่น การทำ Migration, การตั้งเครือข่ายความปลอดภัยขั้นต้น, การสอยผลไม้ใกล้ตัว (Quick Wins) อธิบายภาษาไทย",
+              description: "แผนระยะสั้น (0 - 6 เดือน): Phase 1 การเตรียมความพร้อมและปรับเปลี่ยนโครงสร้างหลัก ภาษาไทย",
             },
             phase2MidTerm: {
               type: Type.STRING,
-              description: "แผนยุทธศาสตร์ระยะกลาง (6-18 เดือน) เช่น การปรับเป็น Microservices การทำซิงค์ข้อมูลไฮบริดขั้นสมบูรณ์ หรือระบบขยายตัวอัตโนมัติ อธิบายภาษาไทย",
+              description: "แผนระยะกลาง (6 - 18 เดือน): Phase 2 การขยายตัวและการย้ายข้อมูล ภาษาไทย",
             },
             phase3LongTerm: {
               type: Type.STRING,
-              description: "แผนยุทธศาสตร์ระยะยาว (18+ เดือน) เช่น การนำข้อมูลมาวิเคราะห์ต่อยอด (Data Analytics/AI), การขับเคลื่อนด้วยเทคโนโลยีไร้เซิร์ฟเวอร์ (Serverless) และเสถียรภาพสูงสุด อธิบายภาษาไทย",
+              description: "แผนระยะยาว (18+ เดือน): Phase 3 สู่ระบบคลาวด์และสถาปัตยกรรมแบบ Serverless เสถียรภาพสูงสุด ภาษาไทย",
             },
             futureGrowthAdaptability: {
               type: Type.STRING,
-              description: "การเตรียมพร้อมระบบเพื่อรองรับการเปลี่ยนแปลงทางธุรกิจขนาดใหญ่หรือการเติบโตของทราฟฟิกในอนาคต 3-5 ปีข้างหน้าอย่างยืดหยุ่น อธิบายภาษาไทย",
-            }
+              description: "การเตรียมพร้อมระบบเพื่อรองรับการเปลี่ยนแปลงทางธุรกิจในอนาคต 3-5 ปีข้างหน้าอย่างยืดหยุ่น ภาษาไทย",
+            },
           },
-          required: ["phase1ShortTerm", "phase2MidTerm", "phase3LongTerm", "futureGrowthAdaptability"]
+          required: ["phase1ShortTerm", "phase2MidTerm", "phase3LongTerm", "futureGrowthAdaptability"],
         },
         riskManagementPlan: {
           type: Type.OBJECT,
-          description: "การบริหารความเสี่ยงและความปลอดภัยทางเทคโนโลยีสารสนเทศ",
+          description: "การบริหารความเสี่ยงและความปลอดภัยทางไอที",
           properties: {
             riskIdentification: {
               type: Type.STRING,
-              description: "การระบุประเมินความเสี่ยงที่มีโอกาสเกิดสูงสุด (เช่น ระบบเครือข่ายขัดข้อง, ข้อมูลรั่วไหล, รหัสผ่านหลุด, ภัยโจมตี) พร้อมจัดระดับความรุนแรง อธิบายภาษาไทย",
+              description: "การระบุความเสี่ยงที่มีนัยสำคัญด้านไอทีและระบบคลาวด์ ภาษาไทย",
             },
             threatMitigationControls: {
               type: Type.STRING,
-              description: "มาตรการควบคุมและเครื่องมือในการปกป้องระบบ (เช่น การตั้ง WAF Rule, การทำเครือข่าย Private Subnet, การใช้ IAM Role, ระบบถอดรหัส Key Management) อธิบายภาษาไทย",
+              description: "มาตรการควบคุมเพื่อบรรเทาภัยคุกคามทางไซเบอร์และความเป็นส่วนตัวของข้อมูล ภาษาไทย",
             },
             businessContinuityPlan: {
               type: Type.STRING,
-              description: "แผนรักษาความต่อเนื่องทางธุรกิจและการกู้คืนข้อมูลกรณีฉุกเฉุกเฉิน (Disaster Recovery) พร้อมกำหนดเป้าหมาย RTO (Recovery Time Objective) และ RPO (Recovery Point Objective) อธิบายภาษาไทย",
-            }
+              description: "แผนสำรองข้อมูลกู้คืนภัยพิบัติ DR Plan กำหนดเป้าหมาย RTO/RPO เพื่อความต่อเนื่องทางธุรกิจ ภาษาไทย",
+            },
           },
-          required: ["riskIdentification", "threatMitigationControls", "businessContinuityPlan"]
+          required: ["riskIdentification", "threatMitigationControls", "businessContinuityPlan"],
         },
         nodes: {
           type: Type.ARRAY,
@@ -178,45 +258,24 @@ app.post("/api/analyze-architecture", async (req, res) => {
           items: {
             type: Type.OBJECT,
             properties: {
-              id: {
-                type: Type.STRING,
-                description: "รหัสโหนดที่ไม่ซ้ำกัน (เช่น load_balancer, waf, api_gateway, web_frontend, user_service, order_service, redis_cache, primary_db, replica_db, onprem_core_db, message_broker, legacy_sync_service)",
+              id: { type: Type.STRING, description: "รหัสเฉพาะของโหนด เช่น web_app, database, api_gateway" },
+              name: { type: Type.STRING, description: "ชื่อโหนดภาษาไทย เช่น เว็บแอปพลิเคชัน, ระบบฐานข้อมูลหลัก" },
+              category: { 
+                type: Type.STRING, 
+                description: "ประเภทโหนด: ingress, security, gateway, compute, cache, database, queue, integration, other" 
               },
-              name: {
-                type: Type.STRING,
-                description: "ชื่อระบบย่อยภาษาไทยหรืออังกฤษกระชับ เช่น CloudFront CDN, AWS WAF Shield, API Gateway, Order Microservice, Primary Postgres (Multi-AZ), On-Premises Oracle Core DB",
-              },
-              category: {
-                type: Type.STRING,
-                description: "หมวดหมู่โหนด: ingress, security, gateway, compute, cache, database, queue, integration, other",
-              },
-              serviceName: {
-                type: Type.STRING,
-                description: "บริการหรือเทคโนโลยีเฉพาะ เช่น Amazon CloudFront, AWS WAF, AWS ECS / EKS, Redis Enterprise, Amazon RDS, Apache Kafka, Site-to-Site VPN, RabbitMQ",
-              },
-              details: {
-                type: Type.STRING,
-                description: "รายละเอียดสเปค คอนฟิก และฟีเจอร์เด่นเป็นภาษาไทย เช่น Auto-scaling 2-10 instances, Multi-AZ replication, VPC Private Subnet, In-memory clustering, SSL/TLS Offloading",
-              },
-              status: {
-                type: Type.STRING,
-                description: "สถานะเริ่มต้นประเมินความปลอดภัย: secure, warning, critical (โหนดที่มีความเสี่ยงต้องวิเคราะห์ให้ตรงกัน)",
-              },
-              provider: {
-                type: Type.STRING,
-                description: "ผู้บริการระบบ: aws, azure, gcp, hybrid, on-premise",
-              },
-              description: {
-                type: Type.STRING,
-                description: "หน้าที่และความรับผิดชอบของโหนดนี้ในภาพรวมระบบ ภาษาไทย",
-              },
+              serviceName: { type: Type.STRING, description: "ชื่อบริการจริง เช่น Amazon ECS, Azure SQL, On-Premises Oracle" },
+              details: { type: Type.STRING, description: "รายละเอียดสเปค เช่น Multi-AZ, Read Replicas, Auto-scaling" },
+              status: { type: Type.STRING, description: "สถานะความมั่นคงปลอดภัย: secure, warning, critical" },
+              provider: { type: Type.STRING, description: "ผู้ให้บริการ: aws, azure, gcp, hybrid, on-premise" },
+              description: { type: Type.STRING, description: "อธิบายสั้นๆ เกี่ยวกับหน้าที่ของโหนดนี้ในระบบ" },
             },
             required: ["id", "name", "category", "serviceName", "details", "status", "provider", "description"],
           },
         },
         connections: {
           type: Type.ARRAY,
-          description: "ความเชื่อมโยงและทิศทางข้อมูลระหว่างโหนดต่างๆ (Topology Connections) แสดงการไหลของข้อมูลจากผู้ใช้ไปจนถึงระบบฐานข้อมูลและ On-premise",
+          description: "รายการเส้นทางการเชื่อมโยงและการส่งข้อมูลระหว่างโหนดต่างๆ จากผู้ใช้ปลายทางไปจนถึงระบบฐานข้อมูลและ On-premise",
           items: {
             type: Type.OBJECT,
             properties: {
@@ -315,13 +374,14 @@ app.post("/api/analyze-architecture", async (req, res) => {
       },
     });
 
-    const reportJson = JSON.parse(response.text?.trim() || "{}");
+    const reportJson = parseGeminiJson(response.text);
     res.json(reportJson);
   } catch (error: any) {
     console.error("Error analyzing architecture:", error);
+    // Secure against system/API error message leaks
     res.status(500).json({
-      error: "เกิดข้อผิดพลาดในการวิเคราะห์สถาปัตยกรรมระบบระบบไอที",
-      details: error.message,
+      error: "เกิดข้อผิดพลาดในการวิเคราะห์สถาปัตยกรรมระบบไอที",
+      details: "การเชื่อมต่อระบบ AI ขัดข้องชั่วคราว โปรดลองใหม่อีกครั้ง",
     });
   }
 });
@@ -384,7 +444,7 @@ ${conversationHistory}
     console.error("Error in chat advisor:", error);
     res.status(500).json({
       error: "เกิดข้อผิดพลาดในการประมวลผลข้อความแชท",
-      details: error.message,
+      details: "การเชื่อมต่อระบบแชทขัดข้องชั่วคราว โปรดลองใหม่อีกครั้ง",
     });
   }
 });
@@ -402,7 +462,7 @@ async function startServer() {
     // In production, serve built files
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    app.get("*all", (req, res) => {
+    app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }

@@ -366,12 +366,16 @@ export default function App() {
 
     const userMsg = newMessage;
     setNewMessage("");
-    setMessages(prev => [...prev, {
+    const userTime = new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+    const userMsgObj: { sender: "user" | "ai"; text: string; time: string } = {
       sender: "user",
       text: userMsg,
-      time: new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })
-    }]);
+      time: userTime
+    };
 
+    // Eliminate state sync closure bug by creating the synced array immediately
+    const updatedMessages = [...messages, userMsgObj];
+    setMessages(updatedMessages);
     setChatLoading(true);
 
     try {
@@ -381,7 +385,7 @@ export default function App() {
         body: JSON.stringify({
           requirements,
           currentReport: report,
-          messages: messages.concat([{ sender: "user", text: userMsg, time: "" }]),
+          messages: updatedMessages,
           newMessage: userMsg
         })
       });
