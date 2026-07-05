@@ -4,11 +4,20 @@ import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
 import { createServer as createViteServer } from "vite";
 import rateLimit from "express-rate-limit";
+import cors from "cors";
 
 dotenv.config();
 
 const app = express();
 const PORT = 3000;
+
+// Enable safe CORS configuration
+app.use(cors({
+  origin: true,
+  credentials: true,
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
 
 // Configure Rate Limiting to prevent brute-forcing/DOS of LLM endpoints
 const apiLimiter = rateLimit({

@@ -32,6 +32,9 @@ import {
   Award
 } from "lucide-react";
 import TopologyBoard from "./components/TopologyBoard";
+import StrategicRoadmap from "./components/StrategicRoadmap";
+import TechComparisonMatrix from "./components/TechComparisonMatrix";
+import CostOptimizationList from "./components/CostOptimizationList";
 import { 
   ArchitectureRequirements, 
   ArchitectureReport, 
@@ -201,7 +204,8 @@ export default function App() {
   };
 
   // Stress simulator engine
-  const runStressSimulation = (scenario: string, currentReport: ArchitectureReport | null = report) => {
+  const runStressSimulation = (scenario: string, currentReportArg?: ArchitectureReport | null) => {
+    const currentReport = currentReportArg !== undefined && currentReportArg !== null ? currentReportArg : report;
     if (!currentReport) return;
     setIsSimulating(true);
     setSimScenario(scenario);
@@ -373,9 +377,12 @@ export default function App() {
       time: userTime
     };
 
-    // Eliminate state sync closure bug by creating the synced array immediately
-    const updatedMessages = [...messages, userMsgObj];
-    setMessages(updatedMessages);
+    // Use a reactive callback to capture the absolute current state of messages
+    let updatedMessages: typeof messages = [];
+    setMessages(prev => {
+      updatedMessages = [...prev, userMsgObj];
+      return updatedMessages;
+    });
     setChatLoading(true);
 
     try {
@@ -753,130 +760,7 @@ export default function App() {
 
               {/* Strategic IT Roadmap & Assessment block */}
               {(report.systemAnalysis || report.itStrategyRoadmap || report.riskManagementPlan) && (
-                <div id="strategic_it_block" className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                  
-                  {/* 1. System Analysis & Assessment */}
-                  {report.systemAnalysis && (
-                    <div className="bg-gradient-to-br from-[#05080f] via-[#090d16] to-indigo-950/10 border border-indigo-500/15 rounded-2xl p-5 shadow-xl space-y-4">
-                      <div className="flex items-center gap-2 border-b border-white/5 pb-3">
-                        <div className="w-8 h-8 rounded bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
-                          <Activity className="w-4 h-4 text-indigo-400" />
-                        </div>
-                        <div>
-                          <h3 className="text-xs font-extrabold text-white uppercase tracking-wider">ประเมินและวิเคราะห์ระบบ</h3>
-                          <p className="text-[9px] text-slate-500 font-mono">SYSTEM ASSESSMENT & ALIGNMENT</p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-4 text-xs">
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">🔍 วิเคราะห์ระบบเดิม & จุดที่ควรระวัง</span>
-                          <p className="text-slate-300 leading-relaxed bg-black/30 p-3 rounded-lg border border-white/5 whitespace-pre-line">
-                            {report.systemAnalysis.legacyStatusAssessment}
-                          </p>
-                        </div>
-
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">🚀 แนวทางการปรับปรุงระบบ (Improvement Path)</span>
-                          <p className="text-slate-300 leading-relaxed bg-black/30 p-3 rounded-lg border border-white/5 whitespace-pre-line">
-                            {report.systemAnalysis.improvementPath}
-                          </p>
-                        </div>
-
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-bold text-emerald-400 block uppercase tracking-wider">🎯 การตอบโจทย์เป้าหมายทางธุรกิจ</span>
-                          <p className="text-slate-300 leading-relaxed bg-emerald-950/5 p-3 rounded-lg border border-emerald-500/10 whitespace-pre-line">
-                            {report.systemAnalysis.businessGoalAlignment}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 2. IT Strategy Roadmap */}
-                  {report.itStrategyRoadmap && (
-                    <div className="bg-gradient-to-br from-[#05080f] via-[#090d16] to-indigo-950/10 border border-indigo-500/15 rounded-2xl p-5 shadow-xl space-y-4">
-                      <div className="flex items-center gap-2 border-b border-white/5 pb-3">
-                        <div className="w-8 h-8 rounded bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-                          <TrendingUp className="w-4 h-4 text-emerald-400" />
-                        </div>
-                        <div>
-                          <h3 className="text-xs font-extrabold text-white uppercase tracking-wider">ยุทธศาสตร์และแผนกลยุทธ์ IT</h3>
-                          <p className="text-[9px] text-slate-500 font-mono">IT STRATEGIC ROADMAP (PHASED PLAN)</p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-4 text-xs">
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">🗓️ แผนระยะสั้น (0 - 6 เดือน): Phase 1</span>
-                          <p className="text-slate-300 leading-relaxed bg-black/30 p-3 rounded-lg border border-white/5 whitespace-pre-line">
-                            {report.itStrategyRoadmap.phase1ShortTerm}
-                          </p>
-                        </div>
-
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">🗓️ แผนระยะกลาง (6 - 18 เดือน): Phase 2</span>
-                          <p className="text-slate-300 leading-relaxed bg-black/30 p-3 rounded-lg border border-white/5 whitespace-pre-line">
-                            {report.itStrategyRoadmap.phase2MidTerm}
-                          </p>
-                        </div>
-
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">🗓️ แผนระยะยาว (18+ เดือน): Phase 3</span>
-                          <p className="text-slate-300 leading-relaxed bg-black/30 p-3 rounded-lg border border-white/5 whitespace-pre-line">
-                            {report.itStrategyRoadmap.phase3LongTerm}
-                          </p>
-                        </div>
-
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-bold text-indigo-300 block uppercase tracking-wider">🔄 การเตรียมพร้อมขยายตัวในอนาคต (3-5 ปี)</span>
-                          <p className="text-slate-300 leading-relaxed bg-indigo-950/10 p-3 rounded-lg border border-indigo-500/10 whitespace-pre-line">
-                            {report.itStrategyRoadmap.futureGrowthAdaptability}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 3. Risk Management & Continuity DR */}
-                  {report.riskManagementPlan && (
-                    <div className="bg-gradient-to-br from-[#05080f] via-[#090d16] to-indigo-950/10 border border-indigo-500/15 rounded-2xl p-5 shadow-xl space-y-4">
-                      <div className="flex items-center gap-2 border-b border-white/5 pb-3">
-                        <div className="w-8 h-8 rounded bg-rose-500/10 flex items-center justify-center border border-rose-500/20">
-                          <Shield className="w-4 h-4 text-rose-400" />
-                        </div>
-                        <div>
-                          <h3 className="text-xs font-extrabold text-white uppercase tracking-wider">การจัดการความเสี่ยงและแผน DR</h3>
-                          <p className="text-[9px] text-slate-500 font-mono">COMPREHENSIVE RISK & DR PLAN</p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-4 text-xs">
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-bold text-rose-400 block uppercase tracking-wider">🚨 การระบุความเสี่ยงที่มีนัยสำคัญด้าน IT</span>
-                          <p className="text-slate-300 leading-relaxed bg-black/30 p-3 rounded-lg border border-white/5 whitespace-pre-line">
-                            {report.riskManagementPlan.riskIdentification}
-                          </p>
-                        </div>
-
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">🛡️ มาตรการควบคุมเพื่อบรรเทาภัยคุกคาม</span>
-                          <p className="text-slate-300 leading-relaxed bg-black/30 p-3 rounded-lg border border-white/5 whitespace-pre-line">
-                            {report.riskManagementPlan.threatMitigationControls}
-                          </p>
-                        </div>
-
-                        <div className="space-y-1">
-                          <span className="text-[10px] font-bold text-amber-400 block uppercase tracking-wider">💾 แผนเผชิญเหตุเพื่อความต่อเนื่องทางธุรกิจ (DR)</span>
-                          <p className="text-slate-300 leading-relaxed bg-amber-950/5 p-3 rounded-lg border border-amber-500/10 whitespace-pre-line">
-                            {report.riskManagementPlan.businessContinuityPlan}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                </div>
+                <StrategicRoadmap report={report} requirements={requirements} />
               )}
 
               {/* Topology Map visualization */}
@@ -1248,94 +1132,14 @@ export default function App() {
               </div>
 
               {/* Cloud Provider Comparative Matrix */}
-              <div id="cloud_comparison" className="bg-white/5 border border-white/10 rounded-2xl p-6">
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                  <Layers className="w-4 h-4 text-indigo-400" />
-                  ตารางเปรียบเทียบเทคโนโลยีข้ามแพลตฟอร์ม (Cross-Cloud & Hybrid Options)
-                </h3>
-                <p className="text-xs text-slate-400 mb-5">
-                  ตารางสรุปผลเปรียบเทียบบริการที่ทำงานทดแทนกันได้ในค่ายยักษ์ใหญ่ เพื่อลดการผูกขาดเทคโนโลยี (Vendor Lock-in) และวางแผน Hybrid Integration
-                </p>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-white/10 text-[10px] uppercase font-bold text-slate-400 bg-black/30">
-                        <th className="p-3">ระบบย่อย (Layer)</th>
-                        <th className="p-3">AWS Resource</th>
-                        <th className="p-3">Azure Resource</th>
-                        <th className="p-3">GCP Resource</th>
-                        <th className="p-3">กลยุทธ์ Hybrid / Open-Source Alternative</th>
-                        <th className="p-3 text-emerald-400">จุดดี (Pros)</th>
-                        <th className="p-3 text-red-400">จุดจำกัด (Cons)</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/5">
-                      {report.techComparison && report.techComparison.length > 0 ? (
-                        report.techComparison.map((tech, idx) => (
-                          <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
-                            <td className="p-3 font-semibold text-white">{tech.category}</td>
-                            <td className="p-3 font-mono text-orange-400">{tech.awsProduct}</td>
-                            <td className="p-3 font-mono text-blue-400">{tech.azureProduct}</td>
-                            <td className="p-3 font-mono text-red-400">{tech.gcpProduct}</td>
-                            <td className="p-3 text-indigo-200">{tech.hybridApproach}</td>
-                            <td className="p-3 text-slate-300 leading-relaxed">{tech.pros}</td>
-                            <td className="p-3 text-slate-400 leading-relaxed">{tech.cons}</td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={7} className="p-3 text-center text-slate-500 italic">ไม่พบบันทึกการเปรียบเทียบเทคโนโลยี</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+              {report.techComparison && report.techComparison.length > 0 && (
+                <TechComparisonMatrix techComparison={report.techComparison} />
+              )}
 
               {/* Long term Infrastructure Cost Optimization Table */}
-              <div id="cost_optimization_block" className="bg-white/5 border border-white/10 rounded-2xl p-6">
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <DollarSign className="w-4 h-4 text-emerald-400" />
-                  แผนการบริหารและลดต้นทุนโครงสร้างระบบไอทีระยะยาว (Cost Optimization & Savings)
-                </h3>
-                <p className="text-xs text-slate-400 mb-5">
-                  ประมาณการค่าใช้จ่ายและวิธีการประหยัดงบด้วยการแบ่งภาระระบบบางส่วนไปทำงานที่ On-Premises หรือใช้เครื่องมือจัดซื้อแบบคุ้มค่า
-                </p>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {report.costOptimization && report.costOptimization.length > 0 ? (
-                    report.costOptimization.map((cost, idx) => (
-                      <div key={idx} className="bg-[#05080c] border border-white/10 rounded-xl p-5 flex flex-col justify-between hover:border-indigo-500/40 transition-all duration-300">
-                        <div>
-                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">แนวทางการประหยัด</span>
-                          <h4 className="text-white font-bold text-sm leading-tight mb-2">{cost.item}</h4>
-                          
-                          <p className="text-xs text-slate-400 leading-relaxed mt-2">
-                            <strong className="text-indigo-300 block mb-1">วิธีการทางวิศวกรรม:</strong>
-                            {cost.hybridStrategy}
-                          </p>
-                        </div>
-
-                        <div className="mt-4 pt-4 border-t border-white/5 flex items-baseline justify-between">
-                          <div>
-                            <span className="text-[9px] text-slate-500 uppercase block">ค่าใช้จ่ายกรณีปกติ</span>
-                            <span className="text-sm font-semibold text-slate-300">{cost.currentEstimate}</span>
-                          </div>
-                          <div className="text-right">
-                            <span className="text-[9px] text-emerald-500 uppercase block font-bold">อัตราที่ประหยัดได้</span>
-                            <span className="text-base font-extrabold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 block mt-0.5">
-                              {cost.potentialSavings}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-xs text-slate-500 italic">ไม่มีข้อมูลประมาณการค่าใช้จ่าย</p>
-                  )}
-                </div>
-              </div>
+              {report.costOptimization && report.costOptimization.length > 0 && (
+                <CostOptimizationList costOptimization={report.costOptimization} />
+              )}
 
             </div>
           ) : (
