@@ -471,14 +471,35 @@ async function startServer() {
     // In production, serve built files
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    app.get("*", (req, res) => {
+    // Support wildcard routing syntax for both Express v4 (*) and Express v5 (*all)
+    const handleSPAFallback = (req: express.Request, res: express.Response) => {
       res.sendFile(path.join(distPath, "index.html"));
-    });
+    };
+    app.get("*", handleSPAFallback);
+    app.get("*all", handleSPAFallback);
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
+
+  // Graceful Shutdown handling for production environment resilience
+  const handleShutdown = (signal: string) => {
+    console.log(`[Graceful Shutdown] Received ${signal}. Closing HTTP server...`);
+    server.close(() => {
+      console.log("[Graceful Shutdown] HTTP server closed cleanly. Exiting process.");
+      process.exit(0);
+    });
+
+    // Force exit after 10 seconds timeout
+    setTimeout(() => {
+      console.error("[Graceful Shutdown] Linger connections detected, forcing exit.");
+      process.exit(1);
+    }, 10000);
+  };
+
+  process.on("SIGTERM", () => handleShutdown("SIGTERM"));
+  process.on("SIGINT", () => handleShutdown("SIGINT"));
 }
 
 startServer();

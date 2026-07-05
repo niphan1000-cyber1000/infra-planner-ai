@@ -33,7 +33,7 @@ export default function TopologyBoard({
   selectedNodeId 
 }: TopologyBoardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [dimensions, setDimensions] = useState({ width: 800, height: 480 });
+  const [dimensions, setDimensions] = useState<{ width: number; height: number }>({ width: 800, height: 480 });
   const [activeConnection, setActiveConnection] = useState<string | null>(null);
 
   // Responsive Resize Observer
@@ -61,7 +61,7 @@ export default function TopologyBoard({
     4: [], // Storage & Databases (Primary, Replicas, On-Premise Core)
   };
 
-  nodes.forEach((node) => {
+  nodes.forEach((node: TopologyNode) => {
     switch (node.category) {
       case "ingress":
       case "security":
@@ -90,11 +90,11 @@ export default function TopologyBoard({
   const numColumns = 5;
   const colWidth = dimensions.width / numColumns;
 
-  [0, 1, 2, 3, 4].forEach((colIndex) => {
+  [0, 1, 2, 3, 4].forEach((colIndex: number) => {
     const colNodes = columns[colIndex] || [];
     const numNodes = colNodes.length;
 
-    colNodes.forEach((node, rowIndex) => {
+    colNodes.forEach((node: TopologyNode, rowIndex: number) => {
       // Horizontal position: Center of column
       const x = colWidth * colIndex + colWidth / 2;
       
@@ -260,7 +260,7 @@ export default function TopologyBoard({
           </defs>
 
           {/* Render Connections */}
-          {connections.map((connection, idx) => {
+          {connections.map((connection: TopologyConnection, idx: number) => {
             const start = nodePositions[connection.from];
             const end = nodePositions[connection.to];
 
@@ -335,7 +335,7 @@ export default function TopologyBoard({
         </svg>
 
         {/* Render Interactive Node Elements */}
-        {nodes.map((node) => {
+        {nodes.map((node: TopologyNode) => {
           const pos = nodePositions[node.id];
           if (!pos) return null;
 
