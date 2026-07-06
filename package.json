@@ -1,5 +1,5 @@
 {
-  "name": "react-example",
+  "name": "infra-planner-ai",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -29,7 +29,8 @@
     "react-dom": "^19.0.1",
     "swagger-ui-express": "^5.0.1",
     "vite": "^6.2.3",
-    "winston": "^3.19.0"
+    "winston": "^3.19.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/compression": "^1.8.1",

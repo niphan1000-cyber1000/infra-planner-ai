@@ -183,6 +183,18 @@ ALLOWED_ORIGINS="https://ais-dev-x2lwrp2gebk7j4b2s2umf5-886681242964.asia-east1.
 
 ## 🚀 คู่มือการทดสอบและการติดตั้งระบบ (Test & Deployment Guide)
 
+### 🛡️ ระบบการตรวจจับข้อมูลลับและการสแกนช่องโหว่ความปลอดภัย (Security & Compliance CI)
+เพื่อความมั่นคงปลอดภัยระดับองค์กรและความสอดคล้องตามมาตรฐาน (Compliance) เราได้บูรณาการระบบตรวจจับและป้องกันช่องโหว่ในระบบ CI/CD Pipeline:
+* **GitHub Actions (Gitleaks Integration)**: ในทุกๆ การส่งข้อมูลขึ้นคลาวด์ (Push/Pull Request) ระบบจะเรียกใช้ **Gitleaks Action** เพื่อทำการสแกนประวัติการคอมมิตทั้งหมดโดยอัตโนมัติ หากตรวจพบ Secret หลุด ระบบ CI จะขัดขวางและแจ้งเตือนทันที
+* **การสแกนช่องโหว่ของ Dependencies (npm audit)**: เราได้เพิ่มกระบวนการตรวจจับช่องโหว่ความปลอดภัยของแพ็กเกจภายนอก (Third-party Packages) ในสเตจวิเคราะห์งาน เพื่อความมั่นใจว่าระบบจะไม่ใช้ไลบรารีที่มีช่องโหว่ระดับสูงขึ้นไปบน Production:
+  ```bash
+  npm audit --production --audit-level=high
+  ```
+* **คำแนะนำในการพัฒนา**: แนะนำให้ทีมพัฒนาติดตั้ง [Gitleaks CLI](https://github.com/gitleaks/gitleaks) เพื่อทำ Local Scanning หรือตั้งค่า git pre-commit hook เพื่อสแกนความปลอดภัยก่อนทำการคอมมิตจริง:
+  ```bash
+  gitleaks detect --verbose
+  ```
+
 ### 🧪 การรันชุดทดสอบ (Unit Tests Execution)
 เราใช้เฟรมเวิร์ก **Vitest** สำหรับรันระบบทดสอบเพื่อความรวดเร็วและความปลอดภัยสูงสุด:
 ```bash

@@ -11,6 +11,7 @@ import compression from "compression";
 import { randomUUID } from "crypto";
 import swaggerUi from "swagger-ui-express";
 import { swaggerDocument } from "./server/swaggerSpec";
+import { metricsService } from "./server/services/metricsService";
 
 // Load environment variables early
 dotenv.config();
@@ -37,12 +38,20 @@ logger.info(`Validating environment: GEMINI_API_KEY is present. Starting in [${N
 
 const app = express();
 
-// Assign Request-ID to track and correlate requests
+// Assign Request-ID to track and correlate requests, and collect performance metrics
 app.use((req, res, next) => {
   const requestId = (req.headers["x-request-id"] as string) || randomUUID();
   (req as any).requestId = requestId;
   res.setHeader("X-Request-Id", requestId);
   logger.info(`[HTTP] ${req.method} ${req.path}`, { requestId, ip: req.ip });
+
+  metricsService.incrementRequests();
+  const startTime = Date.now();
+  res.on("finish", () => {
+    const duration = Date.now() - startTime;
+    metricsService.recordResponseTime(duration);
+  });
+
   next();
 });
 
@@ -195,7 +204,8 @@ app.get("/api/health", async (req, res) => {
     memory,
     node_version: process.version,
     gemini_status: geminiStatus,
-    cache: cacheDiagnostics
+    cache: cacheDiagnostics,
+    metrics: metricsService.getMetrics()
   });
 });
 
