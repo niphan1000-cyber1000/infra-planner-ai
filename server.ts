@@ -4,7 +4,6 @@ import fs from "fs";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import { createServer as createViteServer } from "vite";
-import rateLimit from "express-rate-limit";
 import cors from "cors";
 import helmet from "helmet";
 import compression from "compression";
@@ -13,7 +12,11 @@ import swaggerUi from "swagger-ui-express";
 import { swaggerDocument } from "./server/swaggerSpec";
 import { metricsService } from "./server/services/metricsService";
 
-// Load environment variables early
+// Load environment variables early (support .env.local for local dev and fallback to .env)
+const envLocalPath = path.join(process.cwd(), ".env.local");
+if (fs.existsSync(envLocalPath)) {
+  dotenv.config({ path: envLocalPath });
+}
 dotenv.config();
 
 // Import modular API router
@@ -37,6 +40,10 @@ const NODE_ENV = process.env.NODE_ENV || "development";
 logger.info(`Validating environment: GEMINI_API_KEY is present. Starting in [${NODE_ENV}] mode on port ${PORT}.`);
 
 const app = express();
+
+// Enable trust proxy so that express-rate-limit can accurately detect the client's real IP address
+// in containerized/reverse-proxied hosting environments like Google Cloud Run.
+app.set("trust proxy", 1);
 
 // Assign Request-ID to track and correlate requests, and collect performance metrics
 app.use((req, res, next) => {
@@ -125,17 +132,6 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-// Configure Rate Limiting to prevent brute-forcing/DOS of LLM endpoints
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50, // Limit each IP to 50 requests per 15 minutes
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    error: "คุณส่งคำขอมากเกินไปในระบบกรุณารอ 15 นาทีก่อนลองใหม่อีกครั้ง",
-  },
-});
-
 // JSON parsing middleware
 app.use(express.json({
   limit: "1mb"
@@ -212,8 +208,8 @@ app.get("/api/health", async (req, res) => {
 // Swagger Documentation API UI
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
-// Apply rate limiter specifically to AI endpoints, then mount the modular router
-app.use("/api", apiLimiter, architectureRouter);
+// Mount the modular architecture and AI services router
+app.use("/api", architectureRouter);
 
 // Global Error Handler Middleware (Prevents stack trace leaks and formats responses uniformly)
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

@@ -1,5 +1,34 @@
 import { Request, Response, NextFunction } from "express";
 import winston from "winston";
+import rateLimit from "express-rate-limit";
+
+/**
+ * Rate limiter for heavy system architecture analysis (strict limit)
+ * Limit each IP to 15 requests per 15 minutes to save budget and quota.
+ */
+export const architectureLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: "คุณส่งคำขอวิเคราะห์สถาปัตยกรรมมากเกินไปในระบบกรุณารอ 15 นาทีก่อนลองใหม่อีกครั้ง",
+  }
+});
+
+/**
+ * Rate limiter for interactive chat advisor conversations (moderate limit)
+ * Limit each IP to 50 requests per 15 minutes.
+ */
+export const chatLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 50,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: "คุณส่งคำขอแชทกับผู้ช่วยมากเกินไปในระบบกรุณารอ 15 นาทีก่อนลองใหม่อีกครั้ง",
+  }
+});
 
 /**
  * Neutralizes prompt injections and escapes potential HTML tags

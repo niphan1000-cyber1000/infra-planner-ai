@@ -300,7 +300,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           requirements,
-          currentReport: report,
+          currentReport: report?.cacheKey || report,
           messages: updatedMessages,
           newMessage: userMsg
         })
