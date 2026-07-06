@@ -1,0 +1,44 @@
+version: "3.8"
+
+services:
+  # Full-Stack Web Application Service
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: it-architect-advisor
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      # Define your Gemini API Key here or in local shell environment
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      # Dynamic connection pointing to the Redis service container
+      - REDIS_URL=redis://redis:6379
+      # Production allowed domains
+      - ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+    depends_on:
+      - redis
+    restart: always
+    networks:
+      - app-network
+
+  # High-Performance Local Cache Layer
+  redis:
+    image: redis:7-alpine
+    container_name: it-architect-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: always
+    networks:
+      - app-network
+
+volumes:
+  redis-data:
+
+networks:
+  app-network:
+    driver: bridge

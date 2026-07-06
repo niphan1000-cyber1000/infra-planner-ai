@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useReducer, useEffect, useRef, useState } from "react";
 import { 
   Shield, 
   Server, 
@@ -35,6 +35,7 @@ import TopologyBoard from "./components/TopologyBoard";
 import StrategicRoadmap from "./components/StrategicRoadmap";
 import TechComparisonMatrix from "./components/TechComparisonMatrix";
 import CostOptimizationList from "./components/CostOptimizationList";
+import SkeletonLoader from "./components/SkeletonLoader";
 import { 
   ArchitectureRequirements, 
   ArchitectureReport, 
@@ -43,107 +44,68 @@ import {
   SimulationResult, 
   SimulationMetric 
 } from "./types";
-
-// Standard preset options for the advisor
-const PRESETS = [
-  {
-    name: "🚀 ระบบ E-Commerce พันล้าน (High Load)",
-    description: "รองรับผู้ใช้ 100k+ คนพร้อมกัน, ตะกร้าสินค้า, Flash Sale, ป้องกันสแปมและ DDoS",
-    data: {
-      businessType: "E-Commerce (ระบบจำหน่ายสินค้าและชำระเงินออนไลน์)",
-      userVolume: "high",
-      compliance: ["PCI-DSS", "PDPA"],
-      budget: "balanced",
-      cloudPreference: "hybrid",
-      existingTech: "On-Premises ERP (SAP) และระบบสต็อกเดิม",
-      extraDescription: "ต้องการระบบที่ขยายตัวอัตโนมัติ (Auto-scaling) และรองรับการทำ Flash Sale เพื่อไม่ให้ระบบล่ม และ sync ข้อมูลกลับมายังระบบ ERP ขององค์กรแบบ Real-time",
-      itGoal: "modernize",
-      riskFocus: "strict"
-    }
-  },
-  {
-    name: "🏥 ระบบ Telemedicine โรงพยาบาล (PDPA & HIPAA)",
-    description: "เน้นรักษาความปลอดภัยข้อมูลผู้ป่วย, ถ่ายทอดสดวิดีโอคอล, รองรับการขยายตัวในอนาคต",
-    data: {
-      businessType: "Healthcare & Video Consultation (บริการแพทย์ทางไกล)",
-      userVolume: "medium",
-      compliance: ["PDPA", "HIPAA"],
-      budget: "balanced",
-      cloudPreference: "aws",
-      existingTech: "Legacy Patient Record System (SQL Server) ในโรงพยาบาล",
-      extraDescription: "ต้องการการเข้ารหัสข้อมูลที่เข้มงวดทั้งตอนจัดเก็บ (At Rest) และตอนส่งข้อมูล (In Transit) พร้อมทั้งการบันทึก Log การเข้าถึงข้อมูลเพื่อความโปร่งใส",
-      itGoal: "security",
-      riskFocus: "strict"
-    }
-  },
-  {
-    name: "🏦 Core Banking & Microservices (ความมั่นคงสูง)",
-    description: "เน้นระบบกระจายศูนย์ (Distributed), Zero-trust, ตรวจจับการทุจริต, ระบบ Hybrid Cloud",
-    data: {
-      businessType: "Fintech & Core Banking Platform",
-      userVolume: "high",
-      compliance: ["PCI-DSS", "PDPA"],
-      budget: "unlimited",
-      cloudPreference: "hybrid",
-      existingTech: "Legacy Mainframe และฐานข้อมูล Oracle On-Premises",
-      extraDescription: "สถาปัตยกรรมที่สามารถทำงานทดแทนกันได้ทันที (Active-Active Multi-Region) ข้อมูลต้องถูกต้อง 100% ห้ามมีข้อมูลสูญหายเด็ดขาด (Zero Data Loss)",
-      itGoal: "security",
-      riskFocus: "zero_trust"
-    }
-  },
-  {
-    name: "📡 IoT Smart City Sensor Network (Big Data)",
-    description: "สตรีมข้อมูลความละเอียดสูงจากอุปกรณ์แสนตัว, คัดกรองข้อมูลล่าช้าต่ำ, คลาวด์วิเคราะห์ผล",
-    data: {
-      businessType: "IoT & Smart Energy Monitoring",
-      userVolume: "extreme",
-      compliance: ["GDPR"],
-      budget: "low",
-      cloudPreference: "gcp",
-      existingTech: "ไม่มีระบบเดิม (Greenfield)",
-      extraDescription: "เน้นการรับส่งข้อมูลแบบ Event-Driven ด้วย Kafka และการวิเคราะห์ผลทันทีด้วยเทคโนโลยี Serverless เพื่อประหยัดต้นทุนในเวลาที่ไม่มีข้อมูลส่งเข้ามา",
-      itGoal: "greenfield",
-      riskFocus: "standard"
-    }
-  }
-];
+import { PRESETS } from "./data/presets";
+import { appReducer, initialState, Message } from "./appReducer";
 
 export default function App() {
-  // Input requirements state
-  const [requirements, setRequirements] = useState<ArchitectureRequirements>({
-    businessType: "E-Commerce",
-    userVolume: "medium",
-    compliance: ["PDPA"],
-    budget: "balanced",
-    cloudPreference: "hybrid",
-    existingTech: "On-Premises Legacy DB",
-    extraDescription: "ต้องการระบบที่ป้องกันการโจมตีทางไซเบอร์ และรองรับการขยายตัวได้ดี",
-    itGoal: "modernize",
-    riskFocus: "strict"
-  });
+  const [state, dispatch] = useReducer(appReducer, initialState);
+  const {
+    requirements,
+    loading,
+    report,
+    selectedNode,
+    simScenario,
+    simResult,
+    isSimulating,
+    chatOpen,
+    messages,
+    newMessage,
+    chatLoading
+  } = state;
 
-  // UI state
-  const [loading, setLoading] = useState<boolean>(false);
-  const [report, setReport] = useState<ArchitectureReport | null>(null);
-  const [selectedNode, setSelectedNode] = useState<TopologyNode | null>(null);
-  
-  // Custom stress simulator state
-  const [simScenario, setSimScenario] = useState<string>("normal");
-  const [simResult, setSimResult] = useState<SimulationResult | null>(null);
-  const [isSimulating, setIsSimulating] = useState<boolean>(false);
-
-  // Chat advisor integration
-  const [chatOpen, setChatOpen] = useState<boolean>(false);
-  const [messages, setMessages] = useState<Array<{ sender: "user" | "ai"; text: string; time: string }>>([
-    { 
-      sender: "ai", 
-      text: "สวัสดีครับ! ผมคือ Enterprise IT Architect AI ยินดีให้คำแนะนำเกี่ยวกับสถาปัตยกรรมระบบไอทีและกลยุทธ์คลาวด์ของคุณ คุณสามารถเลือก Template สำเร็จรูปด้านซ้าย หรือกรอกรายละเอียดเพื่อวิเคราะห์โครงสร้างระบบแบบเจาะลึกได้ทันทีครับ", 
-      time: "21:44" 
-    }
-  ]);
-  const [newMessage, setNewMessage] = useState<string>("");
-  const [chatLoading, setChatLoading] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Health and Cache Diagnostics states
+  const [health, setHealth] = useState<any>(null);
+  const [flushMessage, setFlushMessage] = useState<string>("");
+  const [isFlushing, setIsFlushing] = useState<boolean>(false);
+
+  const fetchHealth = async () => {
+    try {
+      const response = await fetch("/api/health");
+      if (response.ok) {
+        const data = await response.json();
+        setHealth(data);
+      }
+    } catch (e) {
+      console.error("Failed to fetch health check details", e);
+    }
+  };
+
+  const triggerFlushCache = async () => {
+    setIsFlushing(true);
+    setFlushMessage("");
+    try {
+      const response = await fetch("/api/cache/clear", { method: "POST" });
+      if (response.ok) {
+        setFlushMessage("ล้างแคชสำเร็จ!");
+        fetchHealth(); // Update metrics immediately
+      } else {
+        setFlushMessage("เกิดข้อผิดพลาด");
+      }
+    } catch (e) {
+      setFlushMessage("เกิดข้อผิดพลาดในการเชื่อมต่อ");
+    } finally {
+      setIsFlushing(false);
+      setTimeout(() => setFlushMessage(""), 4000);
+    }
+  };
+
+  useEffect(() => {
+    fetchHealth();
+    const interval = setInterval(fetchHealth, 15000); // Poll health details every 15 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   // Auto scroll chat
   useEffect(() => {
@@ -152,17 +114,14 @@ export default function App() {
 
   // Handle Preset selection
   const handleApplyPreset = (presetData: any) => {
-    setRequirements(presetData);
+    dispatch({ type: "APPLY_PRESET", presetData });
     // Auto trigger analysis
     triggerAnalysis(presetData);
   };
 
   // Run architectural analysis via API
   const triggerAnalysis = async (reqData: ArchitectureRequirements = requirements) => {
-    setLoading(true);
-    setSelectedNode(null);
-    setSimResult(null);
-    setSimScenario("normal");
+    dispatch({ type: "START_ANALYSIS" });
     try {
       const response = await fetch("/api/analyze-architecture", {
         method: "POST",
@@ -173,33 +132,29 @@ export default function App() {
         throw new Error("Failed to analyze architecture");
       }
       const data = await response.json();
-      setReport(data);
 
-      // Auto-initialize first node for details view if exists
-      if (data.nodes && data.nodes.length > 0) {
-        setSelectedNode(data.nodes[0]);
+      let cacheNote = "";
+      if (data.cacheStatus === "hit-redis") {
+        cacheNote = "\n\n⚡ **[แคช - Redis Hit]** คำแนะนำนี้ถูกดึงมาจากระบบแคชระดับองค์กร (Redis) ทันที ประหยัดค่าใช้จ่ายและตอบสนองความเร็วสูงสุด!";
+      } else if (data.cacheStatus === "hit-memory") {
+        cacheNote = "\n\n⚡ **[แคช - Memory Hit]** คำแนะนำนี้ถูกดึงมาจากหน่วยความจำเซิร์ฟเวอร์หลัก (Local Memory) ทันที ประหยัดต้นทุนและตอบสนองทันใจ!";
+      } else {
+        cacheNote = "\n\n✨ **[วิเคราะห์สด - Gemini Live]** ระบบได้ทำการวิเคราะห์ผ่านโมเดล Gemini 3.5-flash ในรูปแบบ Real-time และบันทึกผลลัพธ์ลงแคชสำหรับครั้งต่อไป!";
       }
 
-      // Pre-add a welcome chat message based on report
-      setMessages(prev => [
-        ...prev,
-        {
-          sender: "ai",
-          text: `วิเคราะห์โครงสร้างระบบสำหรับ "${reqData.businessType}" สำเร็จแล้วครับ! 
+      const welcomeMessageText = `วิเคราะห์โครงสร้างระบบสำหรับ "${reqData.businessType}" สำเร็จแล้วครับ! \n\nผมได้วางระบบในรูปแบบ **${data.architectureStyle || "สถาปัตยกรรมสมัยใหม่"}** ซึ่งมีการเชื่อมต่อระบบระหว่าง Public Cloud และ On-Premise แบบเสถียรและปลอดภัยสูง \nคุณสามารถดูแผนผังโครงสร้าง และวิเคราะห์ปัญหาคอขวด (Bottlenecks) หรือจำลองภัยคุกคามทางไซเบอร์ได้จากหน้าจอระบบได้เลยครับ มีจุดใดที่ต้องการเจาะลึกสอบถามเพิ่มเติมได้ตลอดเวลาครับ!${cacheNote}`;
 
-ผมได้วางระบบในรูปแบบ **${data.architectureStyle || "สถาปัตยกรรมสมัยใหม่"}** ซึ่งมีการเชื่อมต่อระบบระหว่าง Public Cloud และ On-Premise แบบเสถียรและปลอดภัยสูง 
-คุณสามารถดูแผนผังโครงสร้าง และวิเคราะห์ปัญหาคอขวด (Bottlenecks) หรือจำลองภัยคุกคามทางไซเบอร์ได้จากหน้าจอระบบได้เลยครับ มีจุดใดที่ต้องการเจาะลึกสอบถามเพิ่มเติมได้ตลอดเวลาครับ!`,
-          time: new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })
-        }
-      ]);
+      dispatch({ type: "ANALYSIS_SUCCESS", report: data, welcomeMessageText });
 
       // Set default normal simulation
       runStressSimulation("normal", data);
+      
+      // Update health check to see hit counts incremented
+      fetchHealth();
     } catch (error) {
       console.error(error);
       alert("เกิดข้อผิดพลาดในการดึงข้อมูลวิเคราะห์สถาปัตยกรรม กรุณาลองใหม่อีกครั้ง");
-    } finally {
-      setLoading(false);
+      dispatch({ type: "ANALYSIS_FAILURE" });
     }
   };
 
@@ -207,8 +162,7 @@ export default function App() {
   const runStressSimulation = (scenario: string, currentReportArg?: ArchitectureReport | null) => {
     const currentReport = currentReportArg !== undefined && currentReportArg !== null ? currentReportArg : report;
     if (!currentReport) return;
-    setIsSimulating(true);
-    setSimScenario(scenario);
+    dispatch({ type: "START_STRESS_SIMULATION", scenario });
 
     // Mock realistic physics changes based on user architecture variables & scenario
     setTimeout(() => {
@@ -336,54 +290,48 @@ export default function App() {
           break;
       }
 
-      setSimResult({
-        eventName: scenario === "normal" ? "การรับส่งข้อมูลปกติ" : 
-                   scenario === "spike" ? "การจำลองทราฟฟิกกระชากตัวรุนแรง (Traffic Spike)" :
-                   scenario === "ddos" ? "การจำลองภัยคุกคามแบบ DDoS Attack" :
-                   scenario === "hybrid_fail" ? "การจำลองระบบเครือข่ายความล่าช้า (Hybrid Sync Latency)" :
-                   "การจำลองฐานข้อมูลติดล็อกเดดล็อก (Database Lock)",
-        isSuccessful,
-        systemStatus,
-        log,
-        metrics: {
-          latency,
-          throughput,
-          cpuLoad,
-          dbConnections
-        },
-        bottlenecksTriggered,
-        recommendations
+      dispatch({
+        type: "FINISH_STRESS_SIMULATION",
+        simResult: {
+          eventName: scenario === "normal" ? "การรับส่งข้อมูลปกติ" : 
+                     scenario === "spike" ? "การจำลองทราฟฟิกกระชากตัวรุนแรง (Traffic Spike)" : 
+                     scenario === "ddos" ? "การจำลองภัยคุกคามแบบ DDoS Attack" : 
+                     scenario === "hybrid_fail" ? "การเกิดความหน่วง/ดีเลย์ในโครงข่ายระบบไฮบริด (Hybrid Network Delay)" : 
+                     scenario === "db_lock" ? "เกิดการค้างและล็อกในส่วนฐานข้อมูล RDBMS (Database Deadlock)" : "สถานการณ์เสี่ยงภัยระบบ",
+          isSuccessful,
+          systemStatus,
+          log,
+          metrics: {
+            latency,
+            throughput,
+            cpuLoad,
+            dbConnections
+          },
+          bottlenecksTriggered,
+          recommendations
+        }
       });
-      setIsSimulating(false);
-    }, 850);
+    }, 2000);
   };
 
-  // Run initial analysis automatically on mount with first preset
-  useEffect(() => {
-    triggerAnalysis(PRESETS[0].data);
-  }, []);
+  const handleToggleCompliance = (comp: string) => {
+    dispatch({ type: "TOGGLE_COMPLIANCE", compliance: comp });
+  };
 
-  // Send message to AI Chat Advisor
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!newMessage.trim() || chatLoading) return;
 
     const userMsg = newMessage;
-    setNewMessage("");
     const userTime = new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
-    const userMsgObj: { sender: "user" | "ai"; text: string; time: string } = {
+    const userMsgObj: Message = {
       sender: "user",
       text: userMsg,
       time: userTime
     };
 
-    // Use a reactive callback to capture the absolute current state of messages
-    let updatedMessages: typeof messages = [];
-    setMessages(prev => {
-      updatedMessages = [...prev, userMsgObj];
-      return updatedMessages;
-    });
-    setChatLoading(true);
+    const updatedMessages = [...messages, userMsgObj];
+    dispatch({ type: "SEND_CHAT_MESSAGE", userMsgObj });
 
     try {
       const response = await fetch("/api/chat-advisor", {
@@ -400,59 +348,54 @@ export default function App() {
       if (!response.ok) throw new Error("Chat failed");
       const data = await response.json();
 
-      setMessages(prev => [...prev, {
-        sender: "ai",
-        text: data.reply,
-        time: new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })
-      }]);
+      let chatCacheNote = "";
+      if (data.cacheStatus && data.cacheStatus !== "miss") {
+        chatCacheNote = ` (Cached via ${data.cacheStatus === "hit-redis" ? "Redis" : "Memory"})`;
+      }
+
+      dispatch({
+        type: "CHAT_MESSAGE_SUCCESS",
+        aiMsgObj: {
+          sender: "ai",
+          text: data.reply,
+          time: new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }) + chatCacheNote
+        }
+      });
+      fetchHealth();
     } catch (err) {
       console.error(err);
-      setMessages(prev => [...prev, {
-        sender: "ai",
-        text: "ขออภัยด้วยครับ เกิดข้อขัดข้องทางเทคนิคในการประมวลผลคำปรึกษา กรุณาลองใหม่อีกครั้งนะครับ",
-        time: new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })
-      }]);
-    } finally {
-      setChatLoading(false);
+      dispatch({
+        type: "CHAT_MESSAGE_FAILURE",
+        aiErrorMsgObj: {
+          sender: "ai",
+          text: "ขออภัยด้วยครับ เกิดข้อขัดข้องทางเทคนิคในการประมวลผลคำปรึกษา กรุณาลองใหม่อีกครั้ง",
+          time: new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })
+        }
+      });
     }
   };
 
-  // Fast trigger requirements modification helper
-  const handleToggleCompliance = (comp: string) => {
-    const updated = requirements.compliance.includes(comp)
-      ? requirements.compliance.filter(c => c !== comp)
-      : [...requirements.compliance, comp];
-    setRequirements({ ...requirements, compliance: updated });
-  };
-
   return (
-    <div id="immersive_it_advisor" className="min-h-screen bg-[#020408] text-slate-300 font-sans flex flex-col antialiased">
+    <div id="app_root" className="min-h-screen bg-[#020408] text-slate-100 flex flex-col font-sans antialiased selection:bg-indigo-500/30 selection:text-indigo-200">
       
-      {/* Immersive Top Navigation Bar */}
-      <nav id="app_nav" className="h-16 flex items-center justify-between px-6 md:px-8 border-b border-white/10 bg-[#05070a]/90 backdrop-blur-md sticky top-0 z-50">
+      {/* Top Navbar Header */}
+      <nav id="navbar" className="h-16 border-b border-white/5 bg-[#05070a]/80 backdrop-blur-md px-4 md:px-6 flex items-center justify-between z-30 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-indigo-600 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(79,70,229,0.5)] border border-indigo-400">
-            <Cpu className="w-5 h-5 text-white animate-pulse" />
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-400 p-[1px] shadow-lg shadow-indigo-600/20">
+            <div className="w-full h-full bg-[#05070a] rounded-[11px] flex items-center justify-center text-indigo-400">
+              <Shield className="w-4 h-4 animate-pulse" />
+            </div>
           </div>
           <div>
-            <span className="font-bold text-lg tracking-tight text-white flex items-center gap-1.5">
-              NEXUS<span className="text-indigo-400 font-light underline underline-offset-4 decoration-1 decoration-indigo-400/50">ARCH</span>
-              <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded-full border border-indigo-500/30 font-mono font-normal">v3.5 Enterprise AI</span>
-            </span>
-            <p className="text-[10px] text-slate-400 hidden md:block">ระบบวิเคราะห์ ออกแบบสถาปัตยกรรมคลาวด์และแก้ปัญหาความตึงเครียดระบบ</p>
+            <h1 className="text-sm font-bold text-white tracking-wide">สถาปนิกโครงข่ายระบบ AI อัจฉริยะ</h1>
+            <p className="text-[10px] text-indigo-300/70 font-medium">Enterprise Cloud & Hybrid Architecture Sandbox</p>
           </div>
         </div>
 
-        {/* Global state monitor pill */}
-        <div className="flex items-center gap-4">
-          <div className="hidden sm:flex px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span> 
-            ระบบพร้อมรับการจำลอง (Advisor Operational)
-          </div>
-          
+        <div className="flex items-center gap-2">
           <button 
             id="chat_toggle_btn"
-            onClick={() => setChatOpen(!chatOpen)}
+            onClick={() => dispatch({ type: "TOGGLE_CHAT" })}
             className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-semibold transition-all duration-300 border ${
               chatOpen 
                 ? "bg-indigo-600 text-white border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.4)]" 
@@ -484,6 +427,7 @@ export default function App() {
               {PRESETS.map((preset, idx) => (
                 <button
                   key={idx}
+                  type="button"
                   onClick={() => handleApplyPreset(preset.data)}
                   className="w-full text-left p-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-indigo-900/20 hover:border-indigo-500/40 transition-all duration-300 group"
                 >
@@ -512,7 +456,7 @@ export default function App() {
               <input
                 type="text"
                 value={requirements.businessType}
-                onChange={(e) => setRequirements({ ...requirements, businessType: e.target.value })}
+                onChange={(e) => dispatch({ type: "SET_REQUIREMENT_FIELD", field: "businessType", value: e.target.value })}
                 placeholder="เช่น FinTech, E-Commerce, Logistics"
                 className="w-full bg-[#0a0f18] border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
               />
@@ -523,7 +467,7 @@ export default function App() {
               <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">ปริมาณผู้ใช้งานเฉลี่ย / สถิติ</label>
               <select
                 value={requirements.userVolume}
-                onChange={(e) => setRequirements({ ...requirements, userVolume: e.target.value })}
+                onChange={(e) => dispatch({ type: "SET_REQUIREMENT_FIELD", field: "userVolume", value: e.target.value })}
                 className="w-full bg-[#0a0f18] border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
               >
                 <option value="low">ระดับเริ่มต้น - สตาร์ทอัพ (≤ 5,000 คน/วัน)</option>
@@ -545,7 +489,7 @@ export default function App() {
                   <button
                     key={b.value}
                     type="button"
-                    onClick={() => setRequirements({ ...requirements, budget: b.value })}
+                    onClick={() => dispatch({ type: "SET_REQUIREMENT_FIELD", field: "budget", value: b.value })}
                     className={`px-1 py-1.5 rounded text-[10px] font-medium border transition-all duration-200 ${
                       requirements.budget === b.value
                         ? "bg-indigo-600 border-indigo-400 text-white shadow-md shadow-indigo-600/10"
@@ -560,81 +504,31 @@ export default function App() {
 
             {/* Infrastructure Location Preference */}
             <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">สถานที่ตั้ง / คลาวด์เป้าหมาย</label>
+              <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">คลาวด์/โครงสร้างที่เลือกใช้ (Preference)</label>
               <select
                 value={requirements.cloudPreference}
-                onChange={(e) => setRequirements({ ...requirements, cloudPreference: e.target.value })}
+                onChange={(e) => dispatch({ type: "SET_REQUIREMENT_FIELD", field: "cloudPreference", value: e.target.value })}
                 className="w-full bg-[#0a0f18] border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
               >
-                <option value="aws">Amazon Web Services (AWS Global)</option>
-                <option value="azure">Microsoft Azure (Enterprise Active)</option>
-                <option value="gcp">Google Cloud Platform (AI & Data Driven)</option>
-                <option value="hybrid">Hybrid Cloud (On-Premises + Public Cloud คู่กัน)</option>
-                <option value="on-premise">On-Premise Private Cloud เท่านั้น</option>
+                <option value="aws">Amazon Web Services (AWS)</option>
+                <option value="gcp">Google Cloud Platform (GCP)</option>
+                <option value="azure">Microsoft Azure (Azure)</option>
+                <option value="hybrid">ระบบผสมคู่ขนาน (Hybrid Cloud & On-Premises)</option>
+                <option value="on-premise">โครงสร้างหลักองค์กรเอง (Private Data Center / On-Premise)</option>
               </select>
             </div>
-
-            {/* Compliance Matrix */}
-            <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1.5">มาตรฐานข้อกำหนดด้านกฎหมาย</label>
-              <div className="flex flex-wrap gap-1.5">
-                {["PDPA", "HIPAA", "PCI-DSS", "GDPR"].map((comp) => {
-                  const active = requirements.compliance.includes(comp);
-                  return (
-                    <button
-                      key={comp}
-                      type="button"
-                      onClick={() => handleToggleCompliance(comp)}
-                      className={`px-2 py-1 rounded text-[10px] font-mono border transition-all duration-200 ${
-                        active
-                          ? "bg-emerald-500/20 border-emerald-500 text-emerald-300"
-                          : "bg-[#0a0f18] border-white/5 text-slate-500 hover:border-white/20"
-                      }`}
-                    >
-                      {comp}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Legacy Tech Stack */}
-            <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">ระบบหรือฐานข้อมูลเดิม (Legacy)</label>
-              <input
-                type="text"
-                value={requirements.existingTech}
-                onChange={(e) => setRequirements({ ...requirements, existingTech: e.target.value })}
-                placeholder="เช่น Oracle DB On-Premise, Legacy Monolith"
-                className="w-full bg-[#0a0f18] border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-
-            {/* IT Goal */}
             <div>
               <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">เป้าหมายด้านไอทีและธุรกิจ</label>
               <select
                 value={requirements.itGoal}
-                onChange={(e) => setRequirements({ ...requirements, itGoal: e.target.value })}
+                onChange={(e) => dispatch({ type: "SET_REQUIREMENT_FIELD", field: "itGoal", value: e.target.value })}
                 className="w-full bg-[#0a0f18] border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
               >
                 <option value="modernize">ปรับปรุงระบบเดิมและเชื่อมต่อ Legacy (Modernize Legacy)</option>
-                <option value="greenfield">ออกแบบวางแผนระบบใหม่ทั้งหมดจากศูนย์ (Greenfield Design)</option>
-                <option value="security">ความปลอดภัยเข้มงวดและความพร้อมใช้งานสูง (High Security & HA)</option>
-                <option value="cost">เน้นความคุ้มค่าและประหยัดงบประหยัดต้นทุน (Cost Lean Ops)</option>
-              </select>
-            </div>
-
-            {/* Risk Focus */}
-            <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">การบริหารความเสี่ยงทางไอที</label>
-              <select
-                value={requirements.riskFocus}
-                onChange={(e) => setRequirements({ ...requirements, riskFocus: e.target.value })}
-                className="w-full bg-[#0a0f18] border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
-              >
-                <option value="standard">มาตรฐานพื้นฐานและแนวปฏิบัติสากล (Standard Practices)</option>
-                <option value="strict">เข้มงวดสูงสำหรับอุตสาหกรรมที่มีกฎหมายกำกับ (Highly Regulated)</option>
+                <option value="cloud_native">ย้ายข้อมูลสู่คลาวด์และทำ Cloud-Native (Migration to Cloud)</option>
+                <option value="high_availability">ต้องการความพร้อมใช้งานสูงและกระจายโหลด (HA & Multi-Region)</option>
+                <option value="cost_optimization">ลดค่าใช้จ่ายคลาวด์/ทรัพยากร (Cost Optimization)</option>
+                <option value="strict_security">ความปลอดภัยเข้มงวดและระบบที่มีกฎหมายกำกับ (Highly Regulated)</option>
                 <option value="zero_trust">สถาปัตยกรรม Zero-Trust & แผนฟื้นฟูภัยพิบัติ DR (Zero-Trust + DR)</option>
               </select>
             </div>
@@ -644,7 +538,7 @@ export default function App() {
               <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">รายละเอียดเพิ่มเติม / ความปลอดภัยเฉพาะ</label>
               <textarea
                 value={requirements.extraDescription}
-                onChange={(e) => setRequirements({ ...requirements, extraDescription: e.target.value })}
+                onChange={(e) => dispatch({ type: "SET_REQUIREMENT_FIELD", field: "extraDescription", value: e.target.value })}
                 rows={3}
                 placeholder="ระบุความท้าทาย เช่น ปัญหาคอขวดที่เจอ, อุปสรรคเรื่องการเชื่อมต่อระบบเดิม หรือการเข้ารหัสข้อมูลที่ต้องใช้..."
                 className="w-full bg-[#0a0f18] border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 resize-none"
@@ -669,6 +563,128 @@ export default function App() {
                 </>
               )}
             </button>
+
+            <hr className="border-white/5 my-2" />
+
+            {/* System Health & Caching Dashboard */}
+            <div className="bg-slate-900/40 border border-white/5 rounded-xl p-3.5 space-y-3.5">
+              <div className="flex items-center justify-between">
+                <h4 className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <Activity className="w-3.5 h-3.5 text-indigo-400 animate-pulse" /> 3. ความพร้อมและระบบแคช
+                </h4>
+                <span className="flex items-center gap-1 text-[9px] text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
+                  ONLINE
+                </span>
+              </div>
+
+              {health ? (
+                <div className="space-y-2.5 text-[11px]">
+                  {/* Status Badges */}
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <div className="bg-[#0a0f18] p-1.5 rounded border border-white/5 flex flex-col justify-between">
+                      <span className="text-[9px] text-slate-500 uppercase font-medium">Gemini Status</span>
+                      <span className={`font-bold mt-0.5 flex items-center gap-1 text-[10px] ${health.gemini_status === 'connected' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {health.gemini_status === 'connected' ? (
+                          <>
+                            <CheckCircle className="w-3 h-3 shrink-0 text-emerald-400" />
+                            Connected
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="w-3 h-3 shrink-0 text-rose-400" />
+                            Offline
+                          </>
+                        )}
+                      </span>
+                    </div>
+                    <div className="bg-[#0a0f18] p-1.5 rounded border border-white/5 flex flex-col justify-between">
+                      <span className="text-[9px] text-slate-500 uppercase font-medium">Cache Mode</span>
+                      <span className="text-indigo-300 font-bold mt-0.5 flex items-center gap-1 text-[10px]">
+                        <Zap className="w-3 h-3 text-amber-400 shrink-0" />
+                        {health.cache?.redis?.connected ? "Redis Cluster" : "Memory Cache"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Cache Metrics Details */}
+                  <div className="bg-[#06090e] p-2 rounded border border-white/5 space-y-1.5">
+                    <div className="flex justify-between items-center text-slate-400 text-[10px]">
+                      <span>อัตรา Cache Hit:</span>
+                      <span className="font-mono text-emerald-400 font-semibold bg-emerald-500/10 px-1.5 py-0.5 rounded text-[11px]">
+                        {(parseFloat(health.cache?.stats?.hitRatio || "0") * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-slate-400 text-[10px]">
+                      <span>Cache Hits (Redis / Mem):</span>
+                      <span className="text-slate-200 font-mono">
+                        {health.cache?.stats?.totalHits} ({health.cache?.stats?.redisHits} / {health.cache?.stats?.memoryHits})
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-slate-400 text-[10px]">
+                      <span>Cache Misses:</span>
+                      <span className="text-slate-200 font-mono">{health.cache?.stats?.totalMisses}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-400 text-[10px]">
+                      <span>คีย์แคชในระบบ:</span>
+                      <span className="text-slate-200 font-mono">{health.cache?.memory?.entriesCount} entries</span>
+                    </div>
+                  </div>
+
+                  {/* Node system details */}
+                  <div className="bg-[#0a0f18] p-2 rounded border border-white/5 space-y-1 text-slate-400 text-[10px] font-mono leading-tight">
+                    <div className="flex justify-between">
+                      <span>Uptime:</span>
+                      <span className="text-slate-300">{health.uptime_formatted}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Node Version:</span>
+                      <span className="text-slate-300">{health.node_version}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>App Version:</span>
+                      <span className="text-slate-300">v{health.version}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Memory RSS:</span>
+                      <span className="text-slate-300">{health.memory?.rss}</span>
+                    </div>
+                  </div>
+
+                  {/* Clear Cache Button */}
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      onClick={triggerFlushCache}
+                      disabled={isFlushing}
+                      className="w-full py-1.5 rounded bg-white/5 border border-white/10 text-slate-300 hover:bg-rose-950/20 hover:border-rose-500/30 hover:text-rose-300 text-[10px] font-bold transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      {isFlushing ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin text-rose-400" />
+                          กำลังล้างข้อมูลแคช...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="w-3 h-3 text-slate-400" />
+                          ล้างแคชระบบ (Flush Cache)
+                        </>
+                      )}
+                    </button>
+                    {flushMessage && (
+                      <p className={`text-[10px] text-center font-bold mt-1.5 animate-pulse ${flushMessage.includes("สำเร็จ") ? "text-emerald-400" : "text-rose-400"}`}>
+                        {flushMessage}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center py-4 text-slate-500 text-[10px] gap-1.5">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  กำลังดึงข้อมูลสถานะระบบ...
+                </div>
+              )}
+            </div>
           </div>
         </aside>
 
@@ -676,21 +692,25 @@ export default function App() {
         <main id="dashboard_content" className="flex-1 p-4 md:p-6 flex flex-col gap-6 overflow-y-auto">
           
           {loading ? (
-            <div id="loading_screen" className="flex-1 flex flex-col items-center justify-center min-h-[500px] border border-white/10 rounded-2xl bg-[#03060a]/90 relative overflow-hidden">
-              <div className="absolute inset-0 opacity-5" style={{ backgroundImage: "radial-gradient(#ffffff 0.5px, transparent 0.5px)", backgroundSize: "20px 20px" }}></div>
-              <div className="relative z-10 flex flex-col items-center text-center max-w-md px-6">
-                <div className="w-16 h-16 rounded-full border-4 border-indigo-500/20 border-t-indigo-500 flex items-center justify-center mb-6 animate-spin">
-                  <Cpu className="w-8 h-8 text-indigo-400 animate-pulse" />
+            <div className="space-y-6">
+              {/* Compact Sleek Generating Indicator */}
+              <div id="loading_status_indicator" className="bg-indigo-950/15 border border-indigo-500/10 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 relative overflow-hidden animate-[pulse_2s_infinite]">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  </div>
+                  <div>
+                    <h4 className="text-white font-bold text-xs">กำลังออกแบบแผนผังโครงสร้างสถาปัตยกรรมระดับองค์กร...</h4>
+                    <p className="text-[10px] text-slate-400">Gemini AI กำลังเชื่อมต่อ On-Premise & Cloud, วิเคราะห์ความเสี่ยง และเขียนแผนยุทธศาสตร์</p>
+                  </div>
                 </div>
-                <h4 className="text-white font-bold text-lg mb-2">กำลังจำลองและจัดโครงสร้างสถาปัตยกรรมระบบ</h4>
-                <p className="text-xs text-slate-400 leading-relaxed mb-4">
-                  Gemini AI กำลังออกแบบแผนผังเครือข่าย Topology แนะนำระบบคลาวด์วิกฤต, วิเคราะห์การสกัดกั้น DDoS, 
-                  และคำนวณโครงสร้างค่าใช้จ่ายเพื่อความยืดหยุ่นในระยะยาว...
-                </p>
-                <div className="w-full bg-white/5 h-1 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 animate-[pulse_1.5s_infinite]" style={{ width: "85%" }}></div>
+                <div className="w-full md:w-64 bg-white/5 h-1.5 rounded-full overflow-hidden relative">
+                  <div className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 animate-[pulse_1s_infinite] rounded-full" style={{ width: "90%" }}></div>
                 </div>
               </div>
+              
+              {/* Pulsing Skeleton Sections */}
+              <SkeletonLoader />
             </div>
           ) : report ? (
             <div id="report_display" className="space-y-6 animate-[fadeIn_0.5s_ease-out]">
@@ -780,7 +800,7 @@ export default function App() {
                       nodes={report.nodes}
                       connections={report.connections}
                       selectedNodeId={selectedNode?.id}
-                      onNodeSelect={(node) => setSelectedNode(node)}
+                      onNodeSelect={(node) => dispatch({ type: "SET_SELECTED_NODE", node })}
                     />
                   </div>
 
@@ -1046,8 +1066,8 @@ export default function App() {
 
                         <button 
                           onClick={() => {
-                            setChatOpen(true);
-                            setNewMessage(`ช่วยอธิบายวิธีแก้ไขเรื่อง "${simResult.bottlenecksTriggered[0] || "การรับส่งข้อมูลและการขยายตัว"}" อย่างละเอียด และขอแนวทางการคอนฟิกสตรีมมิ่งด้วยครับ`);
+                            dispatch({ type: "OPEN_CHAT" });
+                            dispatch({ type: "SET_NEW_MESSAGE", value: `ช่วยอธิบายวิธีแก้ไขเรื่อง "${simResult.bottlenecksTriggered[0] || "การรับส่งข้อมูลและการขยายตัว"}" อย่างละเอียด และขอแนวทางการคอนฟิกสตรีมมิ่งด้วยครับ` });
                           }}
                           className="mt-4 text-[10px] font-bold text-indigo-400 hover:text-white transition-colors flex items-center gap-1 self-start"
                         >
@@ -1180,7 +1200,7 @@ export default function App() {
             </div>
             
             <button 
-              onClick={() => setChatOpen(false)}
+              onClick={() => dispatch({ type: "TOGGLE_CHAT" })}
               className="text-slate-400 hover:text-white text-xs font-bold px-2 py-1 rounded hover:bg-white/5"
             >
               ย่อหน้าต่าง &times;
@@ -1221,7 +1241,7 @@ export default function App() {
             <div className="px-4 py-2 bg-slate-900/60 border-t border-white/5 flex flex-wrap gap-1.5 overflow-x-auto shrink-0">
               <button 
                 onClick={() => {
-                  setNewMessage("ขอตัวอย่างไฟล์สคริปต์ Terraform เบื้องต้นสำหรับสปอนเซอร์สถาปัตยกรรมนี้หน่อยครับ");
+                  dispatch({ type: "SET_NEW_MESSAGE", value: "ขอตัวอย่างไฟล์สคริปต์ Terraform เบื้องต้นสำหรับสปอนเซอร์สถาปัตยกรรมนี้หน่อยครับ" });
                 }}
                 className="text-[9px] text-indigo-300 hover:text-white bg-indigo-500/10 border border-indigo-500/20 rounded px-2 py-1 font-medium whitespace-nowrap transition-colors"
               >
@@ -1229,7 +1249,7 @@ export default function App() {
               </button>
               <button 
                 onClick={() => {
-                  setNewMessage(`ช่วยวางกลยุทธ์การสำรองข้อมูลและกู้คืนระบบภัยพิบัติ (Disaster Recovery RTO/RPO) ของระบบนี้อย่างสมบูรณ์แบบครับ`);
+                  dispatch({ type: "SET_NEW_MESSAGE", value: "ช่วยวางกลยุทธ์การสำรองข้อมูลและกู้คืนระบบภัยพิบัติ (Disaster Recovery RTO/RPO) ของระบบนี้อย่างสมบูรณ์แบบครับ" });
                 }}
                 className="text-[9px] text-emerald-300 hover:text-white bg-emerald-500/10 border border-emerald-500/20 rounded px-2 py-1 font-medium whitespace-nowrap transition-colors"
               >
@@ -1237,7 +1257,7 @@ export default function App() {
               </button>
               <button 
                 onClick={() => {
-                  setNewMessage("ถ้าต้องการลดต้นทุนเพิ่มอีก 20% โดยยอมรับให้ระบบบางส่วนหน่วงขึ้น ควรพิจารณาปรับโหนดใดเป็นหลักครับ");
+                  dispatch({ type: "SET_NEW_MESSAGE", value: "ถ้าต้องการลดต้นทุนเพิ่มอีก 20% โดยยอมรับให้ระบบบางส่วนหน่วงขึ้น ควรพิจารณาปรับโหนดใดเป็นหลักครับ" });
                 }}
                 className="text-[9px] text-amber-300 hover:text-white bg-amber-500/10 border border-amber-500/20 rounded px-2 py-1 font-medium whitespace-nowrap transition-colors"
               >
@@ -1251,7 +1271,7 @@ export default function App() {
             <input
               type="text"
               value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
+              onChange={(e) => dispatch({ type: "SET_NEW_MESSAGE", value: e.target.value })}
               placeholder="สอบถามเกี่ยวกับ Terraform, การตั้งค่า WAF, วิธีแก้ Latency..."
               className="flex-1 bg-[#020408] border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
             />

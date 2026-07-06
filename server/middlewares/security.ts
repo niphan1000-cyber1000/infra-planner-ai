@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import winston from "winston";
 
 /**
  * Neutralizes prompt injections and escapes potential HTML tags
@@ -7,40 +8,59 @@ export const sanitizeInput = (text: string, maxLength = 1000): string => {
   if (typeof text !== "string") return "";
   let sanitized = text.trim().slice(0, maxLength);
   
-  const forbiddenPatterns = [
-    /system instruction/gi,
-    /ignore previous/gi,
-    /ignore instructions/gi,
-    /you are now/gi,
-    /system override/gi,
-    /override rule/gi,
-    /translate to/gi,
-    /คุณคือ/gi,
-    /เปลี่ยนสวมบทบาท/gi,
-    /จงเพิกเฉย/gi
-  ];
-  
-  for (const pattern of forbiddenPatterns) {
-    sanitized = sanitized.replace(pattern, "[redacted]");
-  }
-  
   // Neutralize potential HTML tag injections
   sanitized = sanitized.replace(/<[^>]*>?/gm, "");
   
   return sanitized;
 };
 
+// Configure underlying Winston logger instance
+const winstonLogger = winston.createLogger({
+  level: "info",
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    process.env.NODE_ENV === "production"
+      ? winston.format.json()
+      : winston.format.combine(
+          winston.format.colorize(),
+          winston.format.printf(({ timestamp, level, message, ...metadata }) => {
+            const metaStr = Object.keys(metadata).length ? ` ${JSON.stringify(metadata)}` : "";
+            return `[${level}] ${timestamp} - ${message}${metaStr}`;
+          })
+        )
+  ),
+  transports: [
+    new winston.transports.Console()
+  ]
+});
+
 /**
- * Observability logger helper
+ * Observability logger helper using Winston under the hood
  */
 export const logger = {
   info: (message: string, meta?: any) => {
-    console.log(`[INFO] ${new Date().toISOString()} - ${message}`, meta ? JSON.stringify(meta) : "");
+    if (meta) {
+      winstonLogger.info(message, meta);
+    } else {
+      winstonLogger.info(message);
+    }
   },
   warn: (message: string, meta?: any) => {
-    console.warn(`[WARN] ${new Date().toISOString()} - ${message}`, meta ? JSON.stringify(meta) : "");
+    if (meta) {
+      winstonLogger.warn(message, meta);
+    } else {
+      winstonLogger.warn(message);
+    }
   },
   error: (message: string, error?: any) => {
-    console.error(`[ERROR] ${new Date().toISOString()} - ${message}`, error || "");
+    if (error instanceof Error) {
+      winstonLogger.error(message, { error: error.message, stack: error.stack });
+    } else if (error && typeof error === "object") {
+      winstonLogger.error(message, { ...error });
+    } else if (error) {
+      winstonLogger.error(message, { error });
+    } else {
+      winstonLogger.error(message);
+    }
   }
 };

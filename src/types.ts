@@ -92,6 +92,8 @@ export interface ArchitectureReport {
   systemAnalysis: SystemAnalysisAndAssessment;
   itStrategyRoadmap: ITStrategyRoadmap;
   riskManagementPlan: ComprehensiveRiskManagement;
+  cacheStatus?: "hit-redis" | "hit-memory" | "miss";
+  cacheKey?: string;
 }
 
 export interface SimulationMetric {
