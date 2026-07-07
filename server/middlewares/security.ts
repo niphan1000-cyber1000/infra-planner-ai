@@ -1,6 +1,13 @@
 import { Request, Response, NextFunction } from "express";
 import winston from "winston";
 import rateLimit from "express-rate-limit";
+import crypto from "crypto";
+
+/**
+ * Generate a cryptographically secure random 32-character hex token at boot
+ * if no custom CACHE_CLEAR_TOKEN is configured in the environment.
+ */
+export const runtimeCacheClearToken = process.env.CACHE_CLEAR_TOKEN || crypto.randomBytes(16).toString("hex");
 
 /**
  * Rate limiter for heavy system architecture analysis (strict limit)
@@ -46,11 +53,9 @@ export const cacheClearLimiter = rateLimit({
 
 /**
  * Authorization middleware for cache clearing.
- * Requires a Bearer token matching CACHE_CLEAR_TOKEN or VITE_CACHE_CLEAR_TOKEN.
- * Defaults to "admin-secure-token" for secure defaults.
+ * Requires a Bearer token matching CACHE_CLEAR_TOKEN or the secure, dynamic runtimeCacheClearToken.
  */
 export const validateCacheClearAuth = (req: Request, res: Response, next: NextFunction) => {
-  const expectedToken = process.env.CACHE_CLEAR_TOKEN || process.env.VITE_CACHE_CLEAR_TOKEN || "admin-secure-token";
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -61,7 +66,7 @@ export const validateCacheClearAuth = (req: Request, res: Response, next: NextFu
   }
 
   const token = authHeader.substring(7).trim();
-  if (token !== expectedToken) {
+  if (token !== runtimeCacheClearToken) {
     return res.status(403).json({
       error: "Forbidden",
       details: "รหัสผ่านผู้ดูแลระบบสำหรับล้างแคชไม่ถูกต้อง"

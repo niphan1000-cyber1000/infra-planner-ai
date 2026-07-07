@@ -6,8 +6,7 @@ import {
   CheckCircle, 
   XCircle, 
   Zap, 
-  Loader2, 
-  RefreshCw 
+  Loader2 
 } from "lucide-react";
 import { useAppContext } from "../hooks/useAppContext";
 import { PRESETS } from "../data/presets";
@@ -17,9 +16,6 @@ export const SidebarInputs: React.FC = () => {
     state,
     dispatch,
     health,
-    triggerFlushCache,
-    isFlushing,
-    flushMessage,
     triggerAnalysis,
     handleApplyPreset
   } = useAppContext();
@@ -293,33 +289,6 @@ export const SidebarInputs: React.FC = () => {
                   <span>Memory RSS:</span>
                   <span className="text-slate-300">{health.memory?.rss}</span>
                 </div>
-              </div>
-
-              {/* Clear Cache Button */}
-              <div className="pt-1">
-                <button
-                  type="button"
-                  onClick={triggerFlushCache}
-                  disabled={isFlushing}
-                  className="w-full py-1.5 rounded bg-white/5 border border-white/10 text-slate-300 hover:bg-rose-950/20 hover:border-rose-500/30 hover:text-rose-300 text-[10px] font-bold transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  {isFlushing ? (
-                    <>
-                      <Loader2 className="w-3 h-3 animate-spin text-rose-400" />
-                      กำลังล้างข้อมูลแคช...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="w-3 h-3 text-slate-400" />
-                      ล้างแคชระบบ (Flush Cache)
-                    </>
-                  )}
-                </button>
-                {flushMessage && (
-                  <p className={`text-[10px] text-center font-bold mt-1.5 animate-pulse ${flushMessage.includes("สำเร็จ") ? "text-emerald-400" : "text-rose-400"}`}>
-                    {flushMessage}
-                  </p>
-                )}
               </div>
             </div>
           ) : (

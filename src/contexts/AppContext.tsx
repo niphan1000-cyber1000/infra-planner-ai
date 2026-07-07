@@ -7,9 +7,6 @@ interface AppContextType {
   dispatch: React.Dispatch<AppAction>;
   health: any;
   fetchHealth: () => Promise<void>;
-  triggerFlushCache: () => Promise<void>;
-  isFlushing: boolean;
-  flushMessage: string;
   triggerAnalysis: (reqData?: ArchitectureRequirements) => Promise<void>;
   runStressSimulation: (scenario: string, currentReportArg?: ArchitectureReport | null) => void;
   handleApplyPreset: (presetData: any) => void;
@@ -33,8 +30,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Health and Cache Diagnostics states
   const [health, setHealth] = useState<any>(null);
-  const [flushMessage, setFlushMessage] = useState<string>("");
-  const [isFlushing, setIsFlushing] = useState<boolean>(false);
 
   const fetchHealth = async () => {
     try {
@@ -45,32 +40,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     } catch (e) {
       console.error("Failed to fetch health check details", e);
-    }
-  };
-
-  const triggerFlushCache = async () => {
-    setIsFlushing(true);
-    setFlushMessage("");
-    try {
-      const token = (import.meta as any).env.VITE_CACHE_CLEAR_TOKEN || "admin-secure-token";
-      const response = await fetch("/api/cache/clear", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
-      });
-      if (response.ok) {
-        setFlushMessage("ล้างแคชสำเร็จ!");
-        fetchHealth(); // Update metrics immediately
-      } else {
-        const errJson = await response.json().catch(() => ({}));
-        setFlushMessage(errJson.details || "เกิดข้อผิดพลาดในการล้างแคช");
-      }
-    } catch (e) {
-      setFlushMessage("เกิดข้อผิดพลาดในการเชื่อมต่อ");
-    } finally {
-      setIsFlushing(false);
-      setTimeout(() => setFlushMessage(""), 4000);
     }
   };
 
@@ -350,9 +319,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         dispatch,
         health,
         fetchHealth,
-        triggerFlushCache,
-        isFlushing,
-        flushMessage,
         triggerAnalysis,
         runStressSimulation,
         handleApplyPreset,
