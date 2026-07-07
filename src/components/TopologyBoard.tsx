@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, memo } from "react";
 import { TopologyNode, TopologyConnection } from "../types";
 import { 
   Shield, 
@@ -26,7 +26,7 @@ interface TopologyBoardProps {
   selectedNodeId?: string;
 }
 
-export default function TopologyBoard({ 
+const TopologyBoard = memo(function TopologyBoard({ 
   nodes, 
   connections, 
   onNodeSelect, 
@@ -395,4 +395,6 @@ export default function TopologyBoard({
       </div>
     </div>
   );
-}
+});
+
+export default TopologyBoard;

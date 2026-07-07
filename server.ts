@@ -12,45 +12,29 @@ import swaggerUi from "swagger-ui-express";
 import { swaggerDocument } from "./server/swaggerSpec";
 import { metricsService } from "./server/services/metricsService";
 
-// Load environment variables early (support .env.local for local dev and fallback to .env)
-const envLocalPath = path.join(process.cwd(), ".env.local");
-if (fs.existsSync(envLocalPath)) {
-  dotenv.config({ path: envLocalPath });
-}
-dotenv.config();
+// Validate essential environment variables immediately on startup using Zod
+import { env } from "./server/config/env";
 
 // Import modular API router
 import architectureRouter from "./server/routes/architectureRoutes";
-import { logger } from "./server/middlewares/security";
+import { logger, correlationIdMiddleware } from "./server/middlewares/security";
 import { cacheService } from "./server/services/cacheService";
 
-// Validate essential environment variables immediately on startup
-if (!process.env.GEMINI_API_KEY) {
-  logger.error("FATAL CONFIGURATION ERROR: GEMINI_API_KEY environment variable is missing!");
-  console.error("\x1b[31m%s\x1b[0m", "================================================================");
-  console.error("\x1b[31m%s\x1b[0m", "FATAL STARTUP ERROR: GEMINI_API_KEY is not configured.");
-  console.error("\x1b[31m%s\x1b[0m", "Please configure the key in the Secrets panel or your .env file.");
-  console.error("\x1b[31m%s\x1b[0m", "================================================================");
-  process.exit(1);
-}
-
-const PORT = Number(process.env.PORT) || 3000;
-const NODE_ENV = process.env.NODE_ENV || "development";
+const PORT = env.PORT;
+const NODE_ENV = env.NODE_ENV;
 
 logger.info(`Validating environment: GEMINI_API_KEY is present. Starting in [${NODE_ENV}] mode on port ${PORT}.`);
 
-const app = express();
+export const app = express();
 
 // Enable trust proxy so that express-rate-limit can accurately detect the client's real IP address
 // in containerized/reverse-proxied hosting environments like Google Cloud Run.
 app.set("trust proxy", 1);
 
-// Assign Request-ID to track and correlate requests, and collect performance metrics
+// Assign Request-ID & Correlation-ID to track and correlate requests, and collect performance metrics
+app.use(correlationIdMiddleware);
 app.use((req, res, next) => {
-  const requestId = (req.headers["x-request-id"] as string) || randomUUID();
-  (req as any).requestId = requestId;
-  res.setHeader("X-Request-Id", requestId);
-  logger.info(`[HTTP] ${req.method} ${req.path}`, { requestId, ip: req.ip });
+  logger.info(`[HTTP] ${req.method} ${req.path}`, { ip: req.ip });
 
   metricsService.incrementRequests();
   const startTime = Date.now();
@@ -143,20 +127,27 @@ async function getGeminiStatus(): Promise<string> {
   if (!apiKey) {
     return "missing_api_key";
   }
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, 3000);
+
   try {
     const ai = new GoogleGenAI({ apiKey });
-    // Use list with a limit to make a fast status-check call
-    const listPromise = ai.models.list();
-    
-    // Fast 3-second timeout to prevent the health check from hanging if Gemini is unresponsive
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Timeout waiting for Gemini API response")), 3000)
-    );
-    
-    await Promise.race([listPromise, timeoutPromise]);
+    // Make a fast model list request with strict timeout signal
+    await ai.models.list({
+      config: {
+        abortSignal: controller.signal,
+      },
+    });
     return "connected";
   } catch (err: any) {
+    if (controller.signal.aborted) {
+      return "error: Timeout waiting for Gemini API response (3000ms)";
+    }
     return `error: ${err.message || err}`;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -172,7 +163,46 @@ try {
   // Silent fallback
 }
 
-// API: Health check (for monitoring / observability)
+// API: Health - Liveness Probe (Returns 200 immediately if server is up)
+app.get("/api/health/liveness", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    checkedAt: new Date().toISOString(),
+  });
+});
+
+// API: Health - Readiness Probe (Checks downstream system readiness)
+app.get("/api/health/readiness", async (req, res) => {
+  const geminiStatus = await getGeminiStatus();
+  const cacheDiagnostics = cacheService.getDiagnostics();
+  
+  // App is ready if Gemini is connected (since core system logic needs it).
+  // Note: Redis failure is non-blocking because we gracefully fallback to high-performance Memory cache!
+  const isGeminiHealthy = geminiStatus === "connected";
+  
+  if (isGeminiHealthy) {
+    res.status(200).json({
+      status: "ready",
+      checkedAt: new Date().toISOString(),
+      dependencies: {
+        gemini: "healthy",
+        cache: cacheDiagnostics.redis.connected ? "redis_connected" : "memory_fallback_active"
+      }
+    });
+  } else {
+    logger.error(`Readiness probe failed. Gemini status: ${geminiStatus}`);
+    res.status(503).json({
+      status: "unready",
+      checkedAt: new Date().toISOString(),
+      dependencies: {
+        gemini: geminiStatus,
+        cache: cacheDiagnostics.redis.connected ? "redis_connected" : "memory_fallback_active"
+      }
+    });
+  }
+});
+
+// API: Health check (for monitoring / observability - comprehensive dashboard)
 app.get("/api/health", async (req, res) => {
   const uptimeRaw = process.uptime();
   const hours = Math.floor(uptimeRaw / 3600);
@@ -208,8 +238,9 @@ app.get("/api/health", async (req, res) => {
 // Swagger Documentation API UI
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
-// Mount the modular architecture and AI services router
+// Mount the modular architecture and AI services router with API Versioning support
 app.use("/api", architectureRouter);
+app.use("/api/v1", architectureRouter);
 
 // Global Error Handler Middleware (Prevents stack trace leaks and formats responses uniformly)
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -271,4 +302,6 @@ async function startServer() {
   process.on("SIGINT", () => handleShutdown("SIGINT"));
 }
 
-startServer();
+if (process.env.NODE_ENV !== "test" && !process.env.VITEST) {
+  startServer();
+}

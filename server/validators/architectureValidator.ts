@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { sanitizeInput } from "../middlewares/security";
+import { sanitizeInput, hasPromptInjectionAttempt } from "../middlewares/security";
 
 export const validateArchitectureRequest = (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -12,6 +12,17 @@ export const validateArchitectureRequest = (req: Request, res: Response, next: N
     req.body.extraDescription = sanitizeInput(req.body.extraDescription, 1000);
     req.body.itGoal = sanitizeInput(req.body.itGoal, 20);
     req.body.riskFocus = sanitizeInput(req.body.riskFocus, 20);
+
+    // 1.1 Check for Prompt Injection attempts on user-submitted text fields
+    if (
+      hasPromptInjectionAttempt(req.body.businessType) ||
+      hasPromptInjectionAttempt(req.body.existingTech) ||
+      hasPromptInjectionAttempt(req.body.extraDescription)
+    ) {
+      return res.status(400).json({
+        error: "ตรวจพบข้อความที่มีความเสี่ยงความปลอดภัยสูงสุด (Prompt Injection Detected) กรุณาหลีกเลี่ยงการใช้คำสั่งที่ควบคุมสิทธิ์การทำงานของระบบ"
+      });
+    }
 
     const rawCompliance = Array.isArray(req.body.compliance) ? req.body.compliance : [];
     req.body.compliance = rawCompliance
@@ -60,6 +71,13 @@ export const validateChatRequest = (req: Request, res: Response, next: NextFunct
     req.body.newMessage = sanitizeInput(req.body.newMessage, 1000);
     if (!req.body.newMessage) {
       return res.status(400).json({ error: "โปรดกรอกข้อความที่ต้องการถามที่ปรึกษาไอที" });
+    }
+
+    // 1.1 Check for Prompt Injection on chat message input
+    if (hasPromptInjectionAttempt(req.body.newMessage)) {
+      return res.status(400).json({
+        error: "ตรวจพบข้อความที่มีความเสี่ยงความปลอดภัยสูง (Prompt Injection Detected) กรุณาหลีกเลี่ยงการใช้คำสั่งที่พยายามควบคุมระบบหรือบทบาทของปัญญาประดิษฐ์"
+      });
     }
 
     // 2. Validate messages array if provided

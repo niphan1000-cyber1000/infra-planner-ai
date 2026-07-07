@@ -28,25 +28,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // AbortController refs to allow cancelling previous operations
+  const healthAbortControllerRef = useRef<AbortController | null>(null);
+  const analysisAbortControllerRef = useRef<AbortController | null>(null);
+  const chatAbortControllerRef = useRef<AbortController | null>(null);
+  const isFetchingHealthRef = useRef<boolean>(false);
+
   // Health and Cache Diagnostics states
   const [health, setHealth] = useState<any>(null);
 
   const fetchHealth = async () => {
+    if (isFetchingHealthRef.current) {
+      // Prevent parallel/overlapping health check calls
+      return;
+    }
+    isFetchingHealthRef.current = true;
+
+    if (healthAbortControllerRef.current) {
+      healthAbortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    healthAbortControllerRef.current = controller;
+
     try {
-      const response = await fetch("/api/health");
+      const response = await fetch("/api/health", {
+        signal: controller.signal
+      });
       if (response.ok) {
         const data = await response.json();
         setHealth(data);
       }
-    } catch (e) {
-      console.error("Failed to fetch health check details", e);
+    } catch (e: any) {
+      if (e.name !== "AbortError") {
+        console.error("Failed to fetch health check details", e);
+      }
+    } finally {
+      isFetchingHealthRef.current = false;
     }
   };
 
   useEffect(() => {
     fetchHealth();
     const interval = setInterval(fetchHealth, 15000); // Poll health details every 15 seconds
-    return () => clearInterval(interval);
+    
+    return () => {
+      clearInterval(interval);
+      // Abort all in-flight requests on unmount
+      if (healthAbortControllerRef.current) healthAbortControllerRef.current.abort();
+      if (analysisAbortControllerRef.current) analysisAbortControllerRef.current.abort();
+      if (chatAbortControllerRef.current) chatAbortControllerRef.current.abort();
+    };
   }, []);
 
   // Auto scroll chat
@@ -64,14 +95,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Run architectural analysis via API
   const triggerAnalysis = async (reqData: ArchitectureRequirements = requirements) => {
     dispatch({ type: "START_ANALYSIS" });
+
+    if (analysisAbortControllerRef.current) {
+      analysisAbortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    analysisAbortControllerRef.current = controller;
+
     try {
       const response = await fetch("/api/analyze-architecture", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(reqData)
+        body: JSON.stringify(reqData),
+        signal: controller.signal
       });
       if (!response.ok) {
-        throw new Error("Failed to analyze architecture");
+        let errMsg = "Failed to analyze architecture";
+        let errDetails = "";
+        try {
+          const errBody = await response.json();
+          if (errBody && errBody.error) {
+            errMsg = errBody.error;
+            errDetails = errBody.details || "";
+          }
+        } catch (_) {
+          try {
+            const txt = await response.text();
+            if (txt) errMsg = txt;
+          } catch (_) {}
+        }
+        const customErr = new Error(errMsg);
+        (customErr as any).details = errDetails;
+        (customErr as any).status = response.status;
+        throw customErr;
       }
       const data = await response.json();
 
@@ -93,9 +149,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       // Update health check to see hit counts incremented
       fetchHealth();
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === "AbortError") {
+        return; // Ignore intentional aborts
+      }
       console.error(error);
-      alert("เกิดข้อผิดพลาดในการดึงข้อมูลวิเคราะห์สถาปัตยกรรม กรุณาลองใหม่อีกครั้ง");
+      const status = error?.status;
+      const title = error?.message || "เกิดข้อผิดพลาดในการดึงข้อมูลวิเคราะห์สถาปัตยกรรม";
+      const details = error?.details ? `\n\nรายละเอียดเพิ่มเติม: ${error.details}` : "";
+      
+      alert(`❌ [ข้อผิดพลาด - Code ${status || 500}] ${title}${details}\n\nกรุณาตรวจสอบข้อมูลนำเข้าหรือลองใหม่อีกครั้ง`);
       dispatch({ type: "ANALYSIS_FAILURE" });
     }
   };
@@ -270,6 +333,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const updatedMessages = [...messages, userMsgObj];
     dispatch({ type: "SEND_CHAT_MESSAGE", userMsgObj });
 
+    if (chatAbortControllerRef.current) {
+      chatAbortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    chatAbortControllerRef.current = controller;
+
     try {
       const response = await fetch("/api/chat-advisor", {
         method: "POST",
@@ -279,10 +348,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           currentReport: report?.cacheKey || report,
           messages: updatedMessages,
           newMessage: userMsg
-        })
+        }),
+        signal: controller.signal
       });
 
-      if (!response.ok) throw new Error("Chat failed");
+      if (!response.ok) {
+        let errMsg = "Chat failed";
+        let errDetails = "";
+        try {
+          const errBody = await response.json();
+          if (errBody && errBody.error) {
+            errMsg = errBody.error;
+            errDetails = errBody.details || "";
+          }
+        } catch (_) {
+          try {
+            const txt = await response.text();
+            if (txt) errMsg = txt;
+          } catch (_) {}
+        }
+        const customErr = new Error(errMsg);
+        (customErr as any).details = errDetails;
+        (customErr as any).status = response.status;
+        throw customErr;
+      }
       const data = await response.json();
 
       let chatCacheNote = "";
@@ -299,13 +388,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       });
       fetchHealth();
-    } catch (err) {
+    } catch (err: any) {
+      if (err.name === "AbortError") {
+        return; // Ignore intentional aborts
+      }
       console.error(err);
+      const title = err?.message || "เกิดข้อขัดข้องทางเทคนิคในการประมวลผลคำปรึกษา";
+      const details = err?.details ? ` (${err.details})` : "";
       dispatch({
         type: "CHAT_MESSAGE_FAILURE",
         aiErrorMsgObj: {
           sender: "ai",
-          text: "ขออภัยด้วยครับ เกิดข้อขัดข้องทางเทคนิคในการประมวลผลคำปรึกษา กรุณาลองใหม่อีกครั้ง",
+          text: `❌ ขออภัยด้วยครับ เกิดข้อผิดพลาด: ${title}${details} กรุณาลองใหม่อีกครั้งครับ`,
           time: new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })
         }
       });

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import { 
   Activity, 
   AlertTriangle, 
@@ -9,11 +9,12 @@ import {
 } from "lucide-react";
 import { useAppContext } from "../hooks/useAppContext";
 
-// Shared subcomponents
-import TopologyBoard from "../components/TopologyBoard";
-import StrategicRoadmap from "../components/StrategicRoadmap";
-import TechComparisonMatrix from "../components/TechComparisonMatrix";
-import CostOptimizationList from "../components/CostOptimizationList";
+// Shared subcomponents (Lazy loaded for optimized code-splitting and bundle performance)
+const TopologyBoard = lazy(() => import("../components/TopologyBoard"));
+const StrategicRoadmap = lazy(() => import("../components/StrategicRoadmap"));
+const TechComparisonMatrix = lazy(() => import("../components/TechComparisonMatrix"));
+const CostOptimizationList = lazy(() => import("../components/CostOptimizationList"));
+
 import SkeletonLoader from "../components/SkeletonLoader";
 
 // Extracted modular components
@@ -77,7 +78,9 @@ export const Workspace: React.FC = () => {
 
               {/* Strategic IT Roadmap & Assessment block */}
               {(report.systemAnalysis || report.itStrategyRoadmap || report.riskManagementPlan) && (
-                <StrategicRoadmap report={report} requirements={requirements} />
+                <Suspense fallback={<div className="h-32 bg-white/5 animate-pulse rounded-2xl flex items-center justify-center text-xs text-slate-400">กำลังโหลดแผนพัฒนา...</div>}>
+                  <StrategicRoadmap report={report} requirements={requirements} />
+                </Suspense>
               )}
 
               {/* Topology Map visualization */}
@@ -93,12 +96,14 @@ export const Workspace: React.FC = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Left Interactive Graph */}
                   <div className="lg:col-span-2">
-                    <TopologyBoard 
-                      nodes={report.nodes}
-                      connections={report.connections}
-                      selectedNodeId={selectedNode?.id}
-                      onNodeSelect={(node) => dispatch({ type: "SET_SELECTED_NODE", node })}
-                    />
+                    <Suspense fallback={<div className="h-80 bg-white/5 animate-pulse rounded-2xl flex items-center justify-center text-xs text-slate-400">กำลังโหลดแผนผังเครือข่าย...</div>}>
+                      <TopologyBoard 
+                        nodes={report.nodes}
+                        connections={report.connections}
+                        selectedNodeId={selectedNode?.id}
+                        onNodeSelect={(node) => dispatch({ type: "SET_SELECTED_NODE", node })}
+                      />
+                    </Suspense>
                   </div>
 
                   {/* Right Selected Node Details Card */}
@@ -246,12 +251,16 @@ export const Workspace: React.FC = () => {
 
               {/* Cloud Provider Comparative Matrix */}
               {report.techComparison && report.techComparison.length > 0 && (
-                <TechComparisonMatrix techComparison={report.techComparison} />
+                <Suspense fallback={<div className="h-48 bg-white/5 animate-pulse rounded-2xl flex items-center justify-center text-xs text-slate-400">กำลังโหลดตารางเปรียบเทียบ...</div>}>
+                  <TechComparisonMatrix techComparison={report.techComparison} />
+                </Suspense>
               )}
 
               {/* Long term Infrastructure Cost Optimization Table */}
               {report.costOptimization && report.costOptimization.length > 0 && (
-                <CostOptimizationList costOptimization={report.costOptimization} />
+                <Suspense fallback={<div className="h-32 bg-white/5 animate-pulse rounded-2xl flex items-center justify-center text-xs text-slate-400">กำลังโหลดตารางวิเคราะห์งบประมาณ...</div>}>
+                  <CostOptimizationList costOptimization={report.costOptimization} />
+                </Suspense>
               )}
 
             </div>

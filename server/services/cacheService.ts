@@ -8,6 +8,7 @@ class CacheService {
   private isRedisConnected = false;
   private memoryCache = new Map<string, { value: any; expiry: number }>();
   private maxMemorySize = 1000; // Limit memory cache to 1000 entries to prevent memory leaks
+  private activePromises = new Map<string, Promise<any>>();
 
   // Metrics for Monitoring Dashboard
   public stats = {
@@ -200,6 +201,47 @@ class CacheService {
       } catch (err: any) {
         logger.error("Redis selective clear error:", err.message || err);
       }
+    }
+  }
+
+  /**
+   * Get an item from the cache, or if it's a miss, fetch it using fetchFn.
+   * Uses the Single Flight pattern (Cache Stampede Protection) to ensure that if multiple identical
+   * requests arrive concurrently on a cache miss, only one fetch is executed while the others wait and join.
+   */
+  public async getOrFetch<T>(
+    key: string,
+    fetchFn: () => Promise<T>,
+    ttlSeconds = 86400
+  ): Promise<{ value: T; source: "redis" | "memory" | "in-flight" }> {
+    // 1. Try to get from cache first
+    const cached = await this.get<T>(key);
+    if (cached) {
+      return { value: cached.value, source: cached.source };
+    }
+
+    // 2. Check if there is an active in-flight request for this key (coalescing)
+    let active = this.activePromises.get(key);
+    if (active) {
+      logger.info(`[CACHE STAMPEDE PROTECTION] Concurrently joining active in-flight request for key: [${key}]`);
+      const val = await active;
+      return { value: val, source: "in-flight" };
+    }
+
+    // 3. Create a new active request promise
+    const promise = (async () => {
+      const val = await fetchFn();
+      await this.set(key, val, ttlSeconds);
+      return val;
+    })();
+
+    this.activePromises.set(key, promise);
+
+    try {
+      const val = await promise;
+      return { value: val, source: "in-flight" };
+    } finally {
+      this.activePromises.delete(key);
     }
   }
 

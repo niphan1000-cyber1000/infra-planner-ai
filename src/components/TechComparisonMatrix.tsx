@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import { Layers } from "lucide-react";
 import { TechComparisonItem } from "../types";
 
@@ -6,7 +6,7 @@ interface TechComparisonMatrixProps {
   techComparison: TechComparisonItem[];
 }
 
-export default function TechComparisonMatrix({ techComparison }: TechComparisonMatrixProps) {
+const TechComparisonMatrix = memo(function TechComparisonMatrix({ techComparison }: TechComparisonMatrixProps) {
   return (
     <div id="tech_comparison" className="bg-[#05080f] border border-white/5 rounded-2xl p-6 shadow-xl space-y-4">
       <div className="flex items-center gap-2 border-b border-white/5 pb-4">
@@ -49,4 +49,6 @@ export default function TechComparisonMatrix({ techComparison }: TechComparisonM
       </div>
     </div>
   );
-}
+});
+
+export default TechComparisonMatrix;
