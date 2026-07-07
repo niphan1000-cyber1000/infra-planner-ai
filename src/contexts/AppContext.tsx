@@ -52,12 +52,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsFlushing(true);
     setFlushMessage("");
     try {
-      const response = await fetch("/api/cache/clear", { method: "POST" });
+      const token = (import.meta as any).env.VITE_CACHE_CLEAR_TOKEN || "admin-secure-token";
+      const response = await fetch("/api/cache/clear", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
       if (response.ok) {
         setFlushMessage("ล้างแคชสำเร็จ!");
         fetchHealth(); // Update metrics immediately
       } else {
-        setFlushMessage("เกิดข้อผิดพลาด");
+        const errJson = await response.json().catch(() => ({}));
+        setFlushMessage(errJson.details || "เกิดข้อผิดพลาดในการล้างแคช");
       }
     } catch (e) {
       setFlushMessage("เกิดข้อผิดพลาดในการเชื่อมต่อ");

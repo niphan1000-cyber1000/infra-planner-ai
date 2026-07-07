@@ -23,8 +23,10 @@ const executeWithRetry = async <T>(
   let attempt = 0;
   while (attempt < maxRetries) {
     try {
+      metricsService.incrementGeminiCalls();
       return await fn();
     } catch (err) {
+      metricsService.incrementGeminiErrors();
       attempt++;
       if (attempt >= maxRetries) {
         throw err;

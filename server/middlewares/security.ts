@@ -31,6 +31,47 @@ export const chatLimiter = rateLimit({
 });
 
 /**
+ * Rate limiter for cache clearing operations (extremely strict limit)
+ * Limit each IP to 5 requests per 1 hour to prevent cache flush abuse.
+ */
+export const cacheClearLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: "คุณส่งคำขอล้างข้อมูลแคชบ่อยเกินไป กรุณารอ 1 ชั่วโมงก่อนลองใหม่อีกครั้ง",
+  }
+});
+
+/**
+ * Authorization middleware for cache clearing.
+ * Requires a Bearer token matching CACHE_CLEAR_TOKEN or VITE_CACHE_CLEAR_TOKEN.
+ * Defaults to "admin-secure-token" for secure defaults.
+ */
+export const validateCacheClearAuth = (req: Request, res: Response, next: NextFunction) => {
+  const expectedToken = process.env.CACHE_CLEAR_TOKEN || process.env.VITE_CACHE_CLEAR_TOKEN || "admin-secure-token";
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({
+      error: "Unauthorized",
+      details: "ต้องระบุสิทธิ์ผู้ดูแลระบบในรูปแบบ Bearer Token เพื่อล้างแคชระบบ"
+    });
+  }
+
+  const token = authHeader.substring(7).trim();
+  if (token !== expectedToken) {
+    return res.status(403).json({
+      error: "Forbidden",
+      details: "รหัสผ่านผู้ดูแลระบบสำหรับล้างแคชไม่ถูกต้อง"
+    });
+  }
+
+  next();
+};
+
+/**
  * Neutralizes prompt injections and escapes potential HTML tags
  */
 export const sanitizeInput = (text: string, maxLength = 1000): string => {

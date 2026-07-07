@@ -56,10 +56,36 @@ export const validateArchitectureRequest = (req: Request, res: Response, next: N
 
 export const validateChatRequest = (req: Request, res: Response, next: NextFunction) => {
   try {
+    // 1. Validate newMessage length and presence
     req.body.newMessage = sanitizeInput(req.body.newMessage, 1000);
     if (!req.body.newMessage) {
       return res.status(400).json({ error: "โปรดกรอกข้อความที่ต้องการถามที่ปรึกษาไอที" });
     }
+
+    // 2. Validate messages array if provided
+    if (req.body.messages !== undefined) {
+      if (!Array.isArray(req.body.messages)) {
+        return res.status(400).json({ error: "ประวัติข้อความแชทต้องอยู่ในรูปแบบของรายการ (Array)" });
+      }
+      
+      // Limit size of history to prevent abuse or memory load (max 50 messages)
+      if (req.body.messages.length > 50) {
+        return res.status(400).json({ error: "ประวัติข้อความแชทเกินขีดจำกัดความยาวสูงสุด (สูงสุด 50 ข้อความ)" });
+      }
+
+      // Sanitize each history entry
+      req.body.messages = req.body.messages.map((msg: any) => {
+        if (!msg || typeof msg !== "object") {
+          return { sender: "user", text: "", time: "" };
+        }
+        return {
+          sender: String(msg.sender) === "ai" || String(msg.sender) === "model" ? "ai" : "user",
+          text: sanitizeInput(String(msg.text || ""), 2000), // Max 2000 chars per history message
+          time: sanitizeInput(String(msg.time || ""), 20),
+        };
+      });
+    }
+
     next();
   } catch (err) {
     res.status(400).json({ error: "ข้อมูลข้อความแชทไม่ถูกต้องตามมาตรฐานความปลอดภัย" });

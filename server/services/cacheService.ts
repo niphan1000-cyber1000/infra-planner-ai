@@ -74,10 +74,27 @@ class CacheService {
   }
 
   /**
-   * Generates a stable and safe SHA-256 hash key for caching any structured request payload
+   * Generates a stable and safe SHA-256 hash key for caching any structured request payload.
+   * Recursively sorts keys to prevent cache collisions and ensures deep object serialization.
    */
   public generateHashKey(prefix: string, payload: any): string {
-    const sortedStr = JSON.stringify(payload, Object.keys(payload || {}).sort());
+    const stableSerialize = (obj: any): any => {
+      if (obj === null || typeof obj !== "object") {
+        return obj;
+      }
+      if (Array.isArray(obj)) {
+        return obj.map(stableSerialize);
+      }
+      const sortedKeys = Object.keys(obj).sort();
+      const result: any = {};
+      for (const key of sortedKeys) {
+        result[key] = stableSerialize(obj[key]);
+      }
+      return result;
+    };
+
+    const sortedObj = stableSerialize(payload);
+    const sortedStr = JSON.stringify(sortedObj);
     const hash = crypto.createHash("sha256").update(sortedStr).digest("hex");
     return `${prefix}:${hash}`;
   }
@@ -150,7 +167,7 @@ class CacheService {
   }
 
   /**
-   * Clear all cached keys (Redis + Memory)
+   * Clear all cached keys belonging to this app (Redis selective scan + Memory)
    */
   public async clear(): Promise<void> {
     this.memoryCache.clear();
@@ -158,10 +175,30 @@ class CacheService {
 
     if (this.redisClient && this.isRedisConnected) {
       try {
-        await this.redisClient.flushdb();
-        logger.info("Flushed all Redis cache keys successfully.");
+        const patterns = ["arch:*", "chat:*"];
+        let deletedCount = 0;
+
+        for (const pattern of patterns) {
+          let cursor = "0";
+          do {
+            const [nextCursor, keys] = await this.redisClient.scan(
+              cursor,
+              "MATCH",
+              pattern,
+              "COUNT",
+              100
+            );
+            cursor = nextCursor;
+            if (keys && keys.length > 0) {
+              await this.redisClient.del(...keys);
+              deletedCount += keys.length;
+            }
+          } while (cursor !== "0");
+        }
+
+        logger.info(`Cleared ${deletedCount} Redis keys matching application patterns selectively.`);
       } catch (err: any) {
-        logger.error("Redis flushdb error:", err.message || err);
+        logger.error("Redis selective clear error:", err.message || err);
       }
     }
   }
