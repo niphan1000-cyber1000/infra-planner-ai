@@ -59,7 +59,7 @@ sequenceDiagram
     participant Gemini as Google Gemini 3.5-flash LLM
 
     User->>App: POST /api/analyze-architecture (ความต้องการระบบ)
-    Note over App: 1. Input Sanitization (Clean HTML/Scripts)<br/>2. Prompt Injection Scanner (Deny-list Match)<br/>3. Zod Payload Validation
+    Note over App: 1. Input Sanitization (Clean HTML/Scripts)\n2. Prompt Injection Scanner (Deny-list Match)\n3. Zod Payload Validation
     
     rect rgb(20, 24, 33)
         Note over App, Cache: ดำเนินการคำนวณ Cache Key ด้วย SHA-256 จาก Inputs

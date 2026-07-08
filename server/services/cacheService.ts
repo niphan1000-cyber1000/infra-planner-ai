@@ -126,6 +126,11 @@ class CacheService {
       if (memItem.expiry > Date.now()) {
         this.stats.hits++;
         this.stats.memoryHits++;
+        
+        // LRU Policy: Delete and re-insert the hit key so it becomes the most recently used (end of insertion order)
+        this.memoryCache.delete(key);
+        this.memoryCache.set(key, memItem);
+        
         return { value: memItem.value, source: "memory" };
       } else {
         // Expired item cleanup
@@ -154,8 +159,11 @@ class CacheService {
     }
 
     // 2. Write to In-Memory Cache (double-caching/local fallback)
-    // Enforce size limit by evicting the oldest key (FIFO)
-    if (this.memoryCache.size >= this.maxMemorySize) {
+    // LRU Policy: If the key already exists, delete it so it will be re-inserted at the end of the Map.
+    if (this.memoryCache.has(key)) {
+      this.memoryCache.delete(key);
+    } else if (this.memoryCache.size >= this.maxMemorySize) {
+      // Evict the least recently used key (which is the first/oldest entry in Map's insertion order)
       const oldestKey = this.memoryCache.keys().next().value;
       if (oldestKey) {
         this.memoryCache.delete(oldestKey);

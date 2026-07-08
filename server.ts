@@ -51,7 +51,18 @@ app.use(compression());
 
 // Apply Helmet for robust HTTP security headers
 app.use(helmet({
-  contentSecurityPolicy: false, // Disable CSP to ensure Vite's inline scripts/resources in the preview environment aren't blocked
+  contentSecurityPolicy: NODE_ENV === "production" ? {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+      imgSrc: ["'self'", "data:", "blob:", "https://*"],
+      connectSrc: ["'self'", "https://*.googleapis.com", "https://*.run.app"],
+      frameAncestors: ["'self'", "https://*.run.app", "https://ai.studio", "https://*.google.com", "https://*.googleusercontent.com"],
+      upgradeInsecureRequests: [],
+    }
+  } : false,
   crossOriginEmbedderPolicy: false,
 }));
 
@@ -77,8 +88,9 @@ const getCorsOrigin = (): boolean | ((origin: string | undefined, callback: (err
 
   // Fallback if no specific configuration is found in production environment
   if (origins.length === 0) {
-    logger.warn("WARNING: No APP_URL or ALLOWED_ORIGINS configured in production! Falling back to allowing same-origin/safe requests.");
-    return true;
+    const errorMsg = "CRITICAL CONFIGURATION ERROR: No APP_URL or ALLOWED_ORIGINS configured in production! CORS must have explicitly defined trusted origins to boot in production mode.";
+    logger.error(errorMsg);
+    throw new Error(errorMsg);
   }
 
   return (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
@@ -175,28 +187,42 @@ app.get("/api/health/liveness", (req, res) => {
 app.get("/api/health/readiness", async (req, res) => {
   const geminiStatus = await getGeminiStatus();
   const cacheDiagnostics = cacheService.getDiagnostics();
+  const isStrictRedis = req.query.strict === "true" || process.env.REDIS_REQUIRED_FOR_READINESS === "true";
   
-  // App is ready if Gemini is connected (since core system logic needs it).
-  // Note: Redis failure is non-blocking because we gracefully fallback to high-performance Memory cache!
   const isGeminiHealthy = geminiStatus === "connected";
   
-  if (isGeminiHealthy) {
+  // Redis is healthy if it is connected, or if it is not configured, or if we are not in strict mode
+  const isRedisHealthy = !cacheDiagnostics.redis.configured || cacheDiagnostics.redis.connected || !isStrictRedis;
+  
+  const isHealthy = isGeminiHealthy && isRedisHealthy;
+  
+  const cacheStatus = cacheDiagnostics.redis.configured 
+    ? (cacheDiagnostics.redis.connected ? "healthy_redis" : (isStrictRedis ? "unhealthy_redis" : "degraded_memory_fallback"))
+    : "healthy_memory";
+
+  if (isHealthy) {
     res.status(200).json({
       status: "ready",
       checkedAt: new Date().toISOString(),
       dependencies: {
         gemini: "healthy",
-        cache: cacheDiagnostics.redis.connected ? "redis_connected" : "memory_fallback_active"
+        cache: cacheStatus
+      },
+      strictMode: {
+        redisRequired: isStrictRedis
       }
     });
   } else {
-    logger.error(`Readiness probe failed. Gemini status: ${geminiStatus}`);
+    logger.error(`Readiness probe failed. Gemini: ${geminiStatus}, Redis (configured: ${cacheDiagnostics.redis.configured}, connected: ${cacheDiagnostics.redis.connected}, strict: ${isStrictRedis})`);
     res.status(503).json({
       status: "unready",
       checkedAt: new Date().toISOString(),
       dependencies: {
         gemini: geminiStatus,
-        cache: cacheDiagnostics.redis.connected ? "redis_connected" : "memory_fallback_active"
+        cache: cacheStatus
+      },
+      strictMode: {
+        redisRequired: isStrictRedis
       }
     });
   }

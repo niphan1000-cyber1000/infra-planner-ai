@@ -1,6 +1,23 @@
 version: "3.8"
 
 services:
+  # High-performance Redis Cache Service
+  redis:
+    image: redis:7-alpine
+    container_name: it-architect-redis
+    command: redis-server --save "" --appendonly no
+    ports:
+      - "6379:6379"
+    restart: always
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 3s
+
   # Full-Stack Web Application Service
   web:
     build:
@@ -16,10 +33,16 @@ services:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       # Production allowed domains
       - ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+      # Redis URL pointing to the redis container within the same Docker network
+      - REDIS_URL=redis://redis:6379
     restart: always
+    depends_on:
+      redis:
+        condition: service_healthy
     networks:
       - app-network
 
 networks:
   app-network:
     driver: bridge
+

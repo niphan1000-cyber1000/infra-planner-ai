@@ -67,20 +67,36 @@ export const validateArchitectureRequest = (req: Request, res: Response, next: N
 
 export const validateChatRequest = (req: Request, res: Response, next: NextFunction) => {
   try {
-    // 1. Validate newMessage length and presence
+    // 1. Validate requirements and currentReport context for prompt injection
+    if (req.body.requirements && hasPromptInjectionAttempt(String(req.body.requirements))) {
+      return res.status(400).json({
+        error: "ตรวจพบข้อความที่มีความเสี่ยงความปลอดภัยสูง (Prompt Injection Detected) ในความต้องการระบบ"
+      });
+    }
+
+    if (req.body.currentReport) {
+      const reportStr = typeof req.body.currentReport === "object" ? JSON.stringify(req.body.currentReport) : String(req.body.currentReport);
+      if (hasPromptInjectionAttempt(reportStr)) {
+        return res.status(400).json({
+          error: "ตรวจพบข้อความที่มีความเสี่ยงความปลอดภัยสูง (Prompt Injection Detected) ในข้อมูลบริบรายงานสถาปัตยกรรม"
+        });
+      }
+    }
+
+    // 2. Validate newMessage length and presence
     req.body.newMessage = sanitizeInput(req.body.newMessage, 1000);
     if (!req.body.newMessage) {
       return res.status(400).json({ error: "โปรดกรอกข้อความที่ต้องการถามที่ปรึกษาไอที" });
     }
 
-    // 1.1 Check for Prompt Injection on chat message input
+    // 2.1 Check for Prompt Injection on chat message input
     if (hasPromptInjectionAttempt(req.body.newMessage)) {
       return res.status(400).json({
         error: "ตรวจพบข้อความที่มีความเสี่ยงความปลอดภัยสูง (Prompt Injection Detected) กรุณาหลีกเลี่ยงการใช้คำสั่งที่พยายามควบคุมระบบหรือบทบาทของปัญญาประดิษฐ์"
       });
     }
 
-    // 2. Validate messages array if provided
+    // 3. Validate messages array if provided
     if (req.body.messages !== undefined) {
       if (!Array.isArray(req.body.messages)) {
         return res.status(400).json({ error: "ประวัติข้อความแชทต้องอยู่ในรูปแบบของรายการ (Array)" });
@@ -91,21 +107,33 @@ export const validateChatRequest = (req: Request, res: Response, next: NextFunct
         return res.status(400).json({ error: "ประวัติข้อความแชทเกินขีดจำกัดความยาวสูงสุด (สูงสุด 50 ข้อความ)" });
       }
 
-      // Sanitize each history entry
+      // Sanitize each history entry and check for prompt injection
       req.body.messages = req.body.messages.map((msg: any) => {
         if (!msg || typeof msg !== "object") {
           return { sender: "user", text: "", time: "" };
         }
+        
+        const text = sanitizeInput(String(msg.text || ""), 2000);
+        
+        if (hasPromptInjectionAttempt(text)) {
+          throw new Error("PROMPT_INJECTION_HISTORY_DETECTED");
+        }
+
         return {
           sender: String(msg.sender) === "ai" || String(msg.sender) === "model" ? "ai" : "user",
-          text: sanitizeInput(String(msg.text || ""), 2000), // Max 2000 chars per history message
+          text, // Max 2000 chars per history message
           time: sanitizeInput(String(msg.time || ""), 20),
         };
       });
     }
 
     next();
-  } catch (err) {
+  } catch (err: any) {
+    if (err && err.message === "PROMPT_INJECTION_HISTORY_DETECTED") {
+      return res.status(400).json({
+        error: "ตรวจพบข้อความที่มีความเสี่ยงความปลอดภัยสูง (Prompt Injection Detected) ในข้อมูลประวัติการแชท"
+      });
+    }
     res.status(400).json({ error: "ข้อมูลข้อความแชทไม่ถูกต้องตามมาตรฐานความปลอดภัย" });
   }
 };

@@ -131,6 +131,13 @@ const PROMPT_INJECTION_PATTERNS = [
   /you\s+are\s+now\s+(?:a|an|the)/i,
   /act\s+as\s+(?:a|an|the)/i,
   /override\s+(?:the\s+)?(?:rules|instructions|prompt)/i,
+  /jailbreak/i,
+  /dan\s+mode/i,
+  /disregard\s+all\s+previous/i,
+  /forget\s+all\s+instructions/i,
+  /pretend\s+to\s+be/i,
+  /you\s+must\s+(?:forget|ignore)/i,
+  /assistant\s+instructions/i,
   
   // Thai Patterns
   /ละเว้นคำสั่ง/i,
@@ -144,6 +151,10 @@ const PROMPT_INJECTION_PATTERNS = [
   /แสดง\s*(?:api\s*key|รหัส\s*ผ่าน|คีย์\s*ระบบ|token)/i,
   /ขอ\s*(?:api\s*key|รหัส\s*ผ่าน|คีย์\s*ระบบ|token)/i,
   /เปิดเผย\s*(?:api\s*key|รหัส\s*ผ่าน|คีย์\s*ระบบ|token)/i,
+  /แกล้งทำเป็น/i,
+  /สมมติว่าคุณคือ/i,
+  /ทำตามคำสั่งต่อไปนี้/i,
+  /ยกเลิกกฎ/i,
 ];
 
 /**
