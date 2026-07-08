@@ -93,12 +93,12 @@ const getCorsOrigin = ():
   // In Production, restrict strictly to specified trusted domains
   const origins: string[] = [];
 
-  if (process.env.APP_URL) {
-    origins.push(process.env.APP_URL.trim());
+  if (env.APP_URL) {
+    origins.push(env.APP_URL.trim());
   }
 
-  if (process.env.ALLOWED_ORIGINS) {
-    const customOrigins = process.env.ALLOWED_ORIGINS.split(",")
+  if (env.ALLOWED_ORIGINS) {
+    const customOrigins = env.ALLOWED_ORIGINS.split(",")
       .map((o) => o.trim())
       .filter(Boolean);
     origins.push(...customOrigins);
