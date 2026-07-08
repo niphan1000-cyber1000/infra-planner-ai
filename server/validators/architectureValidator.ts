@@ -61,7 +61,7 @@ export const validateArchitectureRequest = (req: Request, res: Response, next: N
     }
 
     next();
-  } catch (err) {
+  } catch {
     res.status(400).json({ error: "ข้อมูลนำส่งไม่ผ่านการตรวจสอบความมั่นคงของโครงสร้างข้อมูล" });
   }
 };

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { cacheService } from "./cacheService";
 
 describe("Cache Service - Dual-layer Caching Engine", () => {

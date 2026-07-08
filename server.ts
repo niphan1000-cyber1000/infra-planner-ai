@@ -2,12 +2,10 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import { GoogleGenAI } from "@google/genai";
-import dotenv from "dotenv";
 import { createServer as createViteServer } from "vite";
 import cors from "cors";
 import helmet from "helmet";
 import compression from "compression";
-import { randomUUID } from "crypto";
 import swaggerUi from "swagger-ui-express";
 import { swaggerDocument } from "./server/swaggerSpec";
 import { metricsService } from "./server/services/metricsService";
@@ -125,7 +123,7 @@ const getCorsOrigin = ():
         const allowedUrl = new URL(allowedOrigin);
         const requestUrl = new URL(origin);
         return allowedUrl.origin === requestUrl.origin;
-      } catch (e) {
+      } catch {
         // Fallback string matching if URL parsing fails
         return allowedOrigin === origin || origin.endsWith(allowedOrigin);
       }
@@ -194,7 +192,7 @@ try {
     const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
     cachedAppVersion = pkg.version || "1.0.0";
   }
-} catch (e) {
+} catch {
   // Silent fallback
 }
 
@@ -300,7 +298,7 @@ app.use("/api", architectureRouter);
 app.use("/api/v1", architectureRouter);
 
 // Global Error Handler Middleware (Prevents stack trace leaks and formats responses uniformly)
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   const requestId = (req as any).requestId || "unknown";
   logger.error(`Unhandled error caught by global middleware [RequestID: ${requestId}]:`, err);
 

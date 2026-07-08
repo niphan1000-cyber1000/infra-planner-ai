@@ -78,7 +78,7 @@ export const parseGeminiJson = (text: string | undefined | null) => {
 
   try {
     return JSON.parse(cleaned);
-  } catch (err) {
+  } catch {
     logger.error("Failed to parse Gemini response as JSON. Raw text:", text);
     throw new Error("Invalid response format received from AI");
   }
