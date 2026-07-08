@@ -4,19 +4,14 @@ services:
   # High-performance Redis Cache Service
   redis:
     image: redis:7-alpine
-    container_name: it-architect-redis
-    command: redis-server --save "" --appendonly no
+    container_name: infra-redis
     ports:
       - "6379:6379"
+    volumes:
+      - redis-data:/data
     restart: always
     networks:
       - app-network
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 3s
 
   # Full-Stack Web Application Service
   web:
@@ -37,12 +32,13 @@ services:
       - REDIS_URL=redis://redis:6379
     restart: always
     depends_on:
-      redis:
-        condition: service_healthy
+      - redis
     networks:
       - app-network
+
+volumes:
+  redis-data:
 
 networks:
   app-network:
     driver: bridge
-

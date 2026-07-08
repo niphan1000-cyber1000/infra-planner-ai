@@ -1,6 +1,11 @@
 import React, { createContext, useContext, useReducer, useEffect, useRef, useState } from "react";
 import { appReducer, initialState, AppState, AppAction, Message } from "../appReducer";
-import { ArchitectureRequirements, ArchitectureReport, TopologyNode, SimulationResult } from "../types";
+import {
+  ArchitectureRequirements,
+  ArchitectureReport,
+  TopologyNode,
+  SimulationResult,
+} from "../types";
 
 interface AppContextType {
   state: AppState;
@@ -18,13 +23,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
-  const {
-    requirements,
-    report,
-    newMessage,
-    messages,
-    chatLoading,
-  } = state;
+  const { requirements, report, newMessage, messages, chatLoading } = state;
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -52,7 +51,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     try {
       const response = await fetch("/api/health", {
-        signal: controller.signal
+        signal: controller.signal,
       });
       if (response.ok) {
         const data = await response.json();
@@ -70,7 +69,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     fetchHealth();
     const interval = setInterval(fetchHealth, 15000); // Poll health details every 15 seconds
-    
+
     return () => {
       clearInterval(interval);
       // Abort all in-flight requests on unmount
@@ -107,7 +106,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(reqData),
-        signal: controller.signal
+        signal: controller.signal,
       });
       if (!response.ok) {
         let errMsg = "Failed to analyze architecture";
@@ -133,11 +132,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       let cacheNote = "";
       if (data.cacheStatus === "hit-redis") {
-        cacheNote = "\n\n⚡ **[แคช - Redis Hit]** คำแนะนำนี้ถูกดึงมาจากระบบแคชระดับองค์กร (Redis) ทันที ประหยัดค่าใช้จ่ายและตอบสนองความเร็วสูงสุด!";
+        cacheNote =
+          "\n\n⚡ **[แคช - Redis Hit]** คำแนะนำนี้ถูกดึงมาจากระบบแคชระดับองค์กร (Redis) ทันที ประหยัดค่าใช้จ่ายและตอบสนองความเร็วสูงสุด!";
       } else if (data.cacheStatus === "hit-memory") {
-        cacheNote = "\n\n⚡ **[แคช - Memory Hit]** คำแนะนำนี้ถูกดึงมาจากหน่วยความจำเซิร์ฟเวอร์หลัก (Local Memory) ทันที ประหยัดต้นทุนและตอบสนองทันใจ!";
+        cacheNote =
+          "\n\n⚡ **[แคช - Memory Hit]** คำแนะนำนี้ถูกดึงมาจากหน่วยความจำเซิร์ฟเวอร์หลัก (Local Memory) ทันที ประหยัดต้นทุนและตอบสนองทันใจ!";
       } else {
-        cacheNote = "\n\n✨ **[วิเคราะห์สด - Gemini Live]** ระบบได้ทำการวิเคราะห์ผ่านโมเดล Gemini 3.5-flash ในรูปแบบ Real-time และบันทึกผลลัพธ์ลงแคชสำหรับครั้งต่อไป!";
+        cacheNote =
+          "\n\n✨ **[วิเคราะห์สด - Gemini Live]** ระบบได้ทำการวิเคราะห์ผ่านโมเดล Gemini 3.5-flash ในรูปแบบ Real-time และบันทึกผลลัพธ์ลงแคชสำหรับครั้งต่อไป!";
       }
 
       const welcomeMessageText = `วิเคราะห์โครงสร้างระบบสำหรับ "${reqData.businessType}" สำเร็จแล้วครับ! \n\nผมได้วางระบบในรูปแบบ **${data.architectureStyle || "สถาปัตยกรรมสมัยใหม่"}** ซึ่งมีการเชื่อมต่อระบบระหว่าง Public Cloud และ On-Premise แบบเสถียรและปลอดภัยสูง \nคุณสามารถดูแผนผังโครงสร้าง และวิเคราะห์ปัญหาคอขวด (Bottlenecks) หรือจำลองภัยคุกคามทางไซเบอร์ได้จากหน้าจอระบบได้เลยครับ มีจุดใดที่ต้องการเจาะลึกสอบถามเพิ่มเติมได้ตลอดเวลาครับ!${cacheNote}`;
@@ -146,7 +148,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Set default normal simulation
       runStressSimulation("normal", data);
-      
+
       // Update health check to see hit counts incremented
       fetchHealth();
     } catch (error: any) {
@@ -157,15 +159,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const status = error?.status;
       const title = error?.message || "เกิดข้อผิดพลาดในการดึงข้อมูลวิเคราะห์สถาปัตยกรรม";
       const details = error?.details ? `\n\nรายละเอียดเพิ่มเติม: ${error.details}` : "";
-      
-      alert(`❌ [ข้อผิดพลาด - Code ${status || 500}] ${title}${details}\n\nกรุณาตรวจสอบข้อมูลนำเข้าหรือลองใหม่อีกครั้ง`);
+
+      alert(
+        `❌ [ข้อผิดพลาด - Code ${status || 500}] ${title}${details}\n\nกรุณาตรวจสอบข้อมูลนำเข้าหรือลองใหม่อีกครั้ง`
+      );
       dispatch({ type: "ANALYSIS_FAILURE" });
     }
   };
 
   // Stress simulator engine
   const runStressSimulation = (scenario: string, currentReportArg?: ArchitectureReport | null) => {
-    const currentReport = currentReportArg !== undefined && currentReportArg !== null ? currentReportArg : report;
+    const currentReport =
+      currentReportArg !== undefined && currentReportArg !== null ? currentReportArg : report;
     if (!currentReport) return;
     dispatch({ type: "START_STRESS_SIMULATION", scenario });
 
@@ -181,11 +186,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       let bottlenecksTriggered: string[] = [];
       let recommendations: string[] = [];
 
-      const isHybrid = currentReport.nodes.some(n => n.provider === "on-premise");
-      const hasCache = currentReport.nodes.some(n => n.category === "cache");
+      const isHybrid = currentReport.nodes.some((n) => n.provider === "on-premise");
+      const hasCache = currentReport.nodes.some((n) => n.category === "cache");
 
       // Custom business scale scaling modifiers
-      const scaleMultiplier = requirements.userVolume === "low" ? 4 : requirements.userVolume === "extreme" ? 12 : 1;
+      const scaleMultiplier =
+        requirements.userVolume === "low" ? 4 : requirements.userVolume === "extreme" ? 12 : 1;
 
       switch (scenario) {
         case "spike": // Black Friday Surge
@@ -195,24 +201,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           dbConnections = Math.round(280 * scaleMultiplier);
           isSuccessful = cpuLoad < 95;
           systemStatus = cpuLoad > 90 ? "failed" : cpuLoad > 75 ? "degraded" : "healthy";
-          
+
           log = [
             `[ALERT] Traffic spike detected: +${500 * scaleMultiplier}% request volume.`,
             `[METRIC] Edge API Gateway throughput reached ${throughput} req/s.`,
-            hasCache 
+            hasCache
               ? `[INFO] Redis Cache hits at 94.1% - absorbed ${Math.round(throughput * 0.8)} DB queries successfully.`
               : `[WARN] No cache layer active! Heavy read amplification query hit primary database.`,
             `[INFO] Kubernetes horizontal pod auto-scaler (HPA) triggered: Scaling pods from 3 to 12.`,
-            cpuLoad > 85 ? `[CRITICAL] High database connection pooling limit exceeded.` : `[INFO] Connection limits healthy.`
+            cpuLoad > 85
+              ? `[CRITICAL] High database connection pooling limit exceeded.`
+              : `[INFO] Connection limits healthy.`,
           ];
 
           if (!hasCache) {
             bottlenecksTriggered.push("Database Write/Read Amplification");
-            recommendations.push("ควรติดตั้ง Redis/Memcached cluster เป็นด่านหน้าเพื่อเก็บข้อมูลสินค้าหรือเซสชัน ป้องกัน Database ล่ม");
+            recommendations.push(
+              "ควรติดตั้ง Redis/Memcached cluster เป็นด่านหน้าเพื่อเก็บข้อมูลสินค้าหรือเซสชัน ป้องกัน Database ล่ม"
+            );
           }
           if (cpuLoad > 80) {
             bottlenecksTriggered.push("CPU Starvation in Compute Nodes");
-            recommendations.push("ปรับแต่ง HPA CPU target threshold ลงมาเหลือ 65% เพื่อเริ่มขยาย Pod ได้เร็วยิ่งขึ้นก่อนเกิดคอขวด");
+            recommendations.push(
+              "ปรับแต่ง HPA CPU target threshold ลงมาเหลือ 65% เพื่อเริ่มขยาย Pod ได้เร็วยิ่งขึ้นก่อนเกิดคอขวด"
+            );
           }
           break;
 
@@ -223,17 +235,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           dbConnections = 450;
           isSuccessful = false;
           systemStatus = "failed";
-          
+
           log = [
             `[CRITICAL] Volumetric DDoS attack detected: 15,000 requests per second from 1,200 rogue IPs.`,
             `[SECURITY] AWS WAF rate-limiting rules activated but edge CPU saturated.`,
             `[SYSTEM] Latency spiked to ${latency}ms, resulting in connection timeouts.`,
-            `[DATABASE] Connection pool exhausted due to prolonged requests wait time.`
+            `[DATABASE] Connection pool exhausted due to prolonged requests wait time.`,
           ];
 
           bottlenecksTriggered.push("Edge Network Port Saturation", "WAF CPU Bottleneck");
-          recommendations.push("เปิดใช้บริการ CloudFront Shield Advanced หรือ Cloudflare Magic Transit เพื่อช่วยดูดซับแรงกระแทกจากระดับ Layer 3/4");
-          recommendations.push("เพิ่มกฎ Custom Rate Limit บน API Gateway ให้สกัดกั้นไอพีที่ส่งเกิน 100 req/min ทันที");
+          recommendations.push(
+            "เปิดใช้บริการ CloudFront Shield Advanced หรือ Cloudflare Magic Transit เพื่อช่วยดูดซับแรงกระแทกจากระดับ Layer 3/4"
+          );
+          recommendations.push(
+            "เพิ่มกฎ Custom Rate Limit บน API Gateway ให้สกัดกั้นไอพีที่ส่งเกิน 100 req/min ทันที"
+          );
           break;
 
         case "hybrid_fail": // Hybrid Sync Delay
@@ -248,12 +264,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             `[ALERT] Packet loss detected on VPN / Direct Connect Tunnel back to On-Premise Core Data Center.`,
             `[DATA-BRIDGE] Apache Kafka sync queue length increased from 10 to 45,280 messages.`,
             `[LATENCY] Read replication requests are stalling waiting for transaction confirmation.`,
-            `[INFO] Resiliency fallback: Hybrid API router queuing outgoing messages into local dead-letter-queue (DLQ) to prevent user crash.`
+            `[INFO] Resiliency fallback: Hybrid API router queuing outgoing messages into local dead-letter-queue (DLQ) to prevent user crash.`,
           ];
 
           bottlenecksTriggered.push("Hybrid Sync Latency (Data Bridge lag)");
-          recommendations.push("ติดตั้ง Redundant VPN Site-to-Site หรือเชื่อมต่อ SD-WAN เพิ่มเติมเพื่อสำรองข้อมูลคู่ขนานกับวงจรหลัก (Direct Connect)");
-          recommendations.push("เปลี่ยนวิธีรับส่งข้อมูลสำคัญเป็น Event-Driven (Asynchronous Write-Behind) แทนการดึงผ่าน REST synchronous เพื่อลด dependency ต่อเครือข่าย On-premise");
+          recommendations.push(
+            "ติดตั้ง Redundant VPN Site-to-Site หรือเชื่อมต่อ SD-WAN เพิ่มเติมเพื่อสำรองข้อมูลคู่ขนานกับวงจรหลัก (Direct Connect)"
+          );
+          recommendations.push(
+            "เปลี่ยนวิธีรับส่งข้อมูลสำคัญเป็น Event-Driven (Asynchronous Write-Behind) แทนการดึงผ่าน REST synchronous เพื่อลด dependency ต่อเครือข่าย On-premise"
+          );
           break;
 
         case "db_lock": // Lock Contention
@@ -268,12 +288,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             `[DATABASE] Primary Database thread state: 'waiting for table metadata lock' for 180 seconds.`,
             `[CRITICAL] Write transaction deadlock occurred during high concurrent order processing.`,
             `[GATEWAY] API Gateway returned 504 Gateway Timeout for ${latency}ms queries.`,
-            `[SYSTEM] Connection Pool saturated. New user transactions rejected.`
+            `[SYSTEM] Connection Pool saturated. New user transactions rejected.`,
           ];
 
           bottlenecksTriggered.push("RDBMS Write Lock Contention");
-          recommendations.push("แยกฐานข้อมูลเป็น Read/Write Split (CQRS Pattern) - ส่งคำขออ่านไปที่ Replica Nodes และส่งเขียนเฉพาะที่ Primary");
-          recommendations.push("ลดขนาด Database Transaction ในโค้ด และหลีกเลี่ยง 'SELECT FOR UPDATE' หรือย้ายการล็อกระบบสต็อกไปใช้ Distributed Lock บน Redis แทน");
+          recommendations.push(
+            "แยกฐานข้อมูลเป็น Read/Write Split (CQRS Pattern) - ส่งคำขออ่านไปที่ Replica Nodes และส่งเขียนเฉพาะที่ Primary"
+          );
+          recommendations.push(
+            "ลดขนาด Database Transaction ในโค้ด และหลีกเลี่ยง 'SELECT FOR UPDATE' หรือย้ายการล็อกระบบสต็อกไปใช้ Distributed Lock บน Redis แทน"
+          );
           break;
 
         case "normal":
@@ -288,8 +312,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           log = [
             `[SYSTEM] All components reported healthy state. Ready to scale.`,
             `[MONITOR] Current response latency: 18ms (p99: 42ms).`,
-            isHybrid ? `[HYBRID] Site-to-Site Tunnel ping response: 8ms. Synced.` : `[SYSTEM] Public Cloud routing: Local region.`,
-            `[CACHE] Cache hit ratio steady at 95.8%.`
+            isHybrid
+              ? `[HYBRID] Site-to-Site Tunnel ping response: 8ms. Synced.`
+              : `[SYSTEM] Public Cloud routing: Local region.`,
+            `[CACHE] Cache hit ratio steady at 95.8%.`,
           ];
           break;
       }
@@ -297,11 +323,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       dispatch({
         type: "FINISH_STRESS_SIMULATION",
         simResult: {
-          eventName: scenario === "normal" ? "การรับส่งข้อมูลปกติ" : 
-                     scenario === "spike" ? "การจำลองทราฟฟิกกระชากตัวรุนแรง (Traffic Spike)" : 
-                     scenario === "ddos" ? "การจำลองภัยคุกคามแบบ DDoS Attack" : 
-                     scenario === "hybrid_fail" ? "การเกิดความหน่วง/ดีเลย์ในโครงข่ายระบบไฮบริด (Hybrid Network Delay)" : 
-                     scenario === "db_lock" ? "เกิดการค้างและล็อกในส่วนฐานข้อมูล RDBMS (Database Deadlock)" : "สถานการณ์เสี่ยงภัยระบบ",
+          eventName:
+            scenario === "normal"
+              ? "การรับส่งข้อมูลปกติ"
+              : scenario === "spike"
+                ? "การจำลองทราฟฟิกกระชากตัวรุนแรง (Traffic Spike)"
+                : scenario === "ddos"
+                  ? "การจำลองภัยคุกคามแบบ DDoS Attack"
+                  : scenario === "hybrid_fail"
+                    ? "การเกิดความหน่วง/ดีเลย์ในโครงข่ายระบบไฮบริด (Hybrid Network Delay)"
+                    : scenario === "db_lock"
+                      ? "เกิดการค้างและล็อกในส่วนฐานข้อมูล RDBMS (Database Deadlock)"
+                      : "สถานการณ์เสี่ยงภัยระบบ",
           isSuccessful,
           systemStatus,
           log,
@@ -309,11 +342,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             latency,
             throughput,
             cpuLoad,
-            dbConnections
+            dbConnections,
           },
           bottlenecksTriggered,
-          recommendations
-        }
+          recommendations,
+        },
       });
     }, 2000);
   };
@@ -327,7 +360,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const userMsgObj: Message = {
       sender: "user",
       text: userMsg,
-      time: userTime
+      time: userTime,
     };
 
     const updatedMessages = [...messages, userMsgObj];
@@ -347,9 +380,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           requirements,
           currentReport: report?.cacheKey || report,
           messages: updatedMessages,
-          newMessage: userMsg
+          newMessage: userMsg,
         }),
-        signal: controller.signal
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -384,8 +417,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         aiMsgObj: {
           sender: "ai",
           text: data.reply,
-          time: new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }) + chatCacheNote
-        }
+          time:
+            new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }) +
+            chatCacheNote,
+        },
       });
       fetchHealth();
     } catch (err: any) {
@@ -400,8 +435,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         aiErrorMsgObj: {
           sender: "ai",
           text: `❌ ขออภัยด้วยครับ เกิดข้อผิดพลาด: ${title}${details} กรุณาลองใหม่อีกครั้งครับ`,
-          time: new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })
-        }
+          time: new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
+        },
       });
     }
   };

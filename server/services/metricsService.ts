@@ -44,13 +44,13 @@ class MetricsService {
    * Returns calculated real-time operational metrics
    */
   public getMetrics() {
-    const avgResponseTimeMs = this.responseTimeCount > 0
-      ? Math.round(this.totalResponseTime / this.responseTimeCount)
-      : 0;
+    const avgResponseTimeMs =
+      this.responseTimeCount > 0 ? Math.round(this.totalResponseTime / this.responseTimeCount) : 0;
 
-    const geminiErrorRate = this.geminiCalls > 0
-      ? ((this.geminiErrors / this.geminiCalls) * 100).toFixed(2) + "%"
-      : "0.00%";
+    const geminiErrorRate =
+      this.geminiCalls > 0
+        ? ((this.geminiErrors / this.geminiCalls) * 100).toFixed(2) + "%"
+        : "0.00%";
 
     return {
       totalRequests: this.totalRequests,

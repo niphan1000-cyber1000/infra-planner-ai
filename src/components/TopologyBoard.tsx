@@ -1,22 +1,22 @@
 import { useState, useEffect, useRef, memo } from "react";
 import { TopologyNode, TopologyConnection } from "../types";
-import { 
-  Shield, 
-  Server, 
-  Database, 
-  Cpu, 
-  Globe, 
-  Layers, 
-  Network, 
-  HardDrive, 
-  HelpCircle, 
-  CheckCircle, 
-  AlertTriangle, 
+import {
+  Shield,
+  Server,
+  Database,
+  Cpu,
+  Globe,
+  Layers,
+  Network,
+  HardDrive,
+  HelpCircle,
+  CheckCircle,
+  AlertTriangle,
   XCircle,
   TrendingDown,
   RefreshCw,
   Sliders,
-  Settings
+  Settings,
 } from "lucide-react";
 
 interface TopologyBoardProps {
@@ -26,14 +26,17 @@ interface TopologyBoardProps {
   selectedNodeId?: string;
 }
 
-const TopologyBoard = memo(function TopologyBoard({ 
-  nodes, 
-  connections, 
-  onNodeSelect, 
-  selectedNodeId 
+const TopologyBoard = memo(function TopologyBoard({
+  nodes,
+  connections,
+  onNodeSelect,
+  selectedNodeId,
 }: TopologyBoardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [dimensions, setDimensions] = useState<{ width: number; height: number }>({ width: 800, height: 480 });
+  const [dimensions, setDimensions] = useState<{ width: number; height: number }>({
+    width: 800,
+    height: 480,
+  });
   const [activeConnection, setActiveConnection] = useState<string | null>(null);
 
   // Responsive Resize Observer
@@ -42,9 +45,9 @@ const TopologyBoard = memo(function TopologyBoard({
     const observer = new ResizeObserver((entries) => {
       for (let entry of entries) {
         const { width, height } = entry.contentRect;
-        setDimensions({ 
-          width: Math.max(width, 640), 
-          height: Math.max(height, 420) 
+        setDimensions({
+          width: Math.max(width, 640),
+          height: Math.max(height, 420),
         });
       }
     });
@@ -97,7 +100,7 @@ const TopologyBoard = memo(function TopologyBoard({
     colNodes.forEach((node: TopologyNode, rowIndex: number) => {
       // Horizontal position: Center of column
       const x = colWidth * colIndex + colWidth / 2;
-      
+
       // Vertical position: Spaced out evenly
       const ySpacing = dimensions.height / (numNodes + 1);
       const y = ySpacing * (rowIndex + 1);
@@ -183,8 +186,12 @@ const TopologyBoard = memo(function TopologyBoard({
             <Sliders className="w-4 h-4 text-indigo-600" />
           </div>
           <div>
-            <h3 className="font-semibold text-slate-900 text-sm">ผังจำลองโครงสร้างสถาปัตยกรรมระบบไอที (System Topology Map)</h3>
-            <p className="text-xs text-slate-500">แสดงการเชื่อมโยง ทิศทางข้อมูล และสถานะความปลอดภัยของแต่ละ Component</p>
+            <h3 className="font-semibold text-slate-900 text-sm">
+              ผังจำลองโครงสร้างสถาปัตยกรรมระบบไอที (System Topology Map)
+            </h3>
+            <p className="text-xs text-slate-500">
+              แสดงการเชื่อมโยง ทิศทางข้อมูล และสถานะความปลอดภัยของแต่ละ Component
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-3 text-xs text-slate-600">
@@ -195,10 +202,12 @@ const TopologyBoard = memo(function TopologyBoard({
             <span className="w-2.5 h-2.5 rounded-full bg-blue-400 border border-blue-500" /> Azure
           </span>
           <span className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-slate-400 border border-slate-500" /> On-Premise
+            <span className="w-2.5 h-2.5 rounded-full bg-slate-400 border border-slate-500" />{" "}
+            On-Premise
           </span>
           <span className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 border border-emerald-500" /> Hybrid
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 border border-emerald-500" />{" "}
+            Hybrid
           </span>
         </div>
       </div>
@@ -213,13 +222,13 @@ const TopologyBoard = memo(function TopologyBoard({
       </div>
 
       {/* Topology Area */}
-      <div 
+      <div
         ref={containerRef}
         className="relative w-full overflow-hidden bg-slate-50/30 min-h-[460px] cursor-crosshair select-none"
         style={{ height: dimensions.height }}
       >
         {/* SVG Connections Overlay */}
-        <svg 
+        <svg
           className="absolute inset-0 w-full h-full pointer-events-none"
           style={{ width: dimensions.width, height: dimensions.height }}
         >
@@ -233,7 +242,7 @@ const TopologyBoard = memo(function TopologyBoard({
               <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.8" />
               <stop offset="100%" stopColor="#ef4444" stopOpacity="0.8" />
             </linearGradient>
-            
+
             {/* Arrow marker for direction flow */}
             <marker
               id="arrow"
@@ -310,7 +319,7 @@ const TopologyBoard = memo(function TopologyBoard({
                     strokeDasharray="8, 12"
                     className="animate-[dash_1.5s_linear_infinite]"
                     style={{
-                      strokeDashoffset: 100
+                      strokeDashoffset: 100,
                     }}
                   />
                 )}
@@ -369,8 +378,12 @@ const TopologyBoard = memo(function TopologyBoard({
               </div>
               {node.status !== "secure" && (
                 <div className="absolute -top-1.5 -right-1.5 flex h-3 w-3">
-                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${node.status === "critical" ? "bg-red-400" : "bg-amber-400"}`}></span>
-                  <span className={`relative inline-flex rounded-full h-3 w-3 ${node.status === "critical" ? "bg-red-500" : "bg-amber-500"}`}></span>
+                  <span
+                    className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${node.status === "critical" ? "bg-red-400" : "bg-amber-400"}`}
+                  ></span>
+                  <span
+                    className={`relative inline-flex rounded-full h-3 w-3 ${node.status === "critical" ? "bg-red-500" : "bg-amber-500"}`}
+                  ></span>
                 </div>
               )}
             </div>
@@ -380,7 +393,10 @@ const TopologyBoard = memo(function TopologyBoard({
 
       {/* Styled Grid Legend Footer */}
       <div className="bg-slate-50 border-t border-slate-100 px-4 py-2.5 text-[11px] text-slate-500 flex flex-wrap gap-4 items-center justify-between">
-        <div>💡 วางเมาส์เหนือเส้นเพื่อตรวจสอบรูปแบบความสัมพันธ์การรับส่งข้อมูล (เช่น HTTPS, API REST, Sync CDC)</div>
+        <div>
+          💡 วางเมาส์เหนือเส้นเพื่อตรวจสอบรูปแบบความสัมพันธ์การรับส่งข้อมูล (เช่น HTTPS, API REST,
+          Sync CDC)
+        </div>
         <div className="flex gap-2">
           <span className="flex items-center gap-1">
             <CheckCircle className="w-3 h-3 text-emerald-500" /> ปลอดภัยสูงสุด

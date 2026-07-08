@@ -26,9 +26,11 @@ class CacheService {
 
   private initializeRedis() {
     const redisUrl = process.env.REDIS_URL;
-    
+
     if (!redisUrl) {
-      logger.info("REDIS_URL is not configured. Falling back to high-performance local In-Memory Cache.");
+      logger.info(
+        "REDIS_URL is not configured. Falling back to high-performance local In-Memory Cache."
+      );
       return;
     }
 
@@ -126,11 +128,11 @@ class CacheService {
       if (memItem.expiry > Date.now()) {
         this.stats.hits++;
         this.stats.memoryHits++;
-        
+
         // LRU Policy: Delete and re-insert the hit key so it becomes the most recently used (end of insertion order)
         this.memoryCache.delete(key);
         this.memoryCache.set(key, memItem);
-        
+
         return { value: memItem.value, source: "memory" };
       } else {
         // Expired item cleanup
@@ -205,7 +207,9 @@ class CacheService {
           } while (cursor !== "0");
         }
 
-        logger.info(`Cleared ${deletedCount} Redis keys matching application patterns selectively.`);
+        logger.info(
+          `Cleared ${deletedCount} Redis keys matching application patterns selectively.`
+        );
       } catch (err: any) {
         logger.error("Redis selective clear error:", err.message || err);
       }
@@ -231,7 +235,9 @@ class CacheService {
     // 2. Check if there is an active in-flight request for this key (coalescing)
     let active = this.activePromises.get(key);
     if (active) {
-      logger.info(`[CACHE STAMPEDE PROTECTION] Concurrently joining active in-flight request for key: [${key}]`);
+      logger.info(
+        `[CACHE STAMPEDE PROTECTION] Concurrently joining active in-flight request for key: [${key}]`
+      );
       const val = await active;
       return { value: val, source: "in-flight" };
     }
@@ -272,10 +278,11 @@ class CacheService {
         redisHits: this.stats.redisHits,
         memoryHits: this.stats.memoryHits,
         totalMisses: this.stats.misses,
-        hitRatio: this.stats.hits + this.stats.misses > 0 
-          ? (this.stats.hits / (this.stats.hits + this.stats.misses)).toFixed(4) 
-          : "0.0000",
-      }
+        hitRatio:
+          this.stats.hits + this.stats.misses > 0
+            ? (this.stats.hits / (this.stats.hits + this.stats.misses)).toFixed(4)
+            : "0.0000",
+      },
     };
   }
 }

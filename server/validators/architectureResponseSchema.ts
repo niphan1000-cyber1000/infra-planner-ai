@@ -6,22 +6,24 @@ import { z } from "zod";
 export const NodeSchema = z.object({
   id: z.string().min(1, "Node ID cannot be empty"),
   name: z.string().min(1, "Node Name cannot be empty"),
-  category: z.enum([
-    "ingress",
-    "security",
-    "gateway",
-    "compute",
-    "cache",
-    "database",
-    "queue",
-    "integration",
-    "other"
-  ]).default("other"),
+  category: z
+    .enum([
+      "ingress",
+      "security",
+      "gateway",
+      "compute",
+      "cache",
+      "database",
+      "queue",
+      "integration",
+      "other",
+    ])
+    .default("other"),
   serviceName: z.string().default("Unknown Service"),
   details: z.string().default(""),
   status: z.enum(["secure", "warning", "critical"]).default("secure"),
   provider: z.enum(["aws", "azure", "gcp", "hybrid", "on-premise"]).default("hybrid"),
-  description: z.string().default("")
+  description: z.string().default(""),
 });
 
 /**
@@ -30,7 +32,7 @@ export const NodeSchema = z.object({
 export const ConnectionSchema = z.object({
   from: z.string().min(1, "Connection from node ID is required"),
   to: z.string().min(1, "Connection to node ID is required"),
-  label: z.string().default("Connection")
+  label: z.string().default("Connection"),
 });
 
 /**
@@ -41,7 +43,7 @@ export const BottleneckSchema = z.object({
   title: z.string().min(1, "Bottleneck title is required"),
   description: z.string().default(""),
   severity: z.enum(["high", "medium", "low"]).default("medium"),
-  solution: z.string().default("")
+  solution: z.string().default(""),
 });
 
 /**
@@ -52,7 +54,7 @@ export const SecurityRiskSchema = z.object({
   title: z.string().min(1, "Security risk title is required"),
   description: z.string().default(""),
   severity: z.enum(["high", "medium", "low"]).default("medium"),
-  mitigation: z.string().default("")
+  mitigation: z.string().default(""),
 });
 
 /**
@@ -62,7 +64,7 @@ export const CostOptimizationSchema = z.object({
   item: z.string().min(1, "Cost optimization item is required"),
   currentEstimate: z.string().default("N/A"),
   hybridStrategy: z.string().default(""),
-  potentialSavings: z.string().default("")
+  potentialSavings: z.string().default(""),
 });
 
 /**
@@ -75,7 +77,7 @@ export const TechComparisonSchema = z.object({
   gcpProduct: z.string().default("N/A"),
   hybridApproach: z.string().default(""),
   pros: z.string().default(""),
-  cons: z.string().default("")
+  cons: z.string().default(""),
 });
 
 /**
@@ -85,45 +87,51 @@ export const ArchitectureResponseSchema = z.object({
   executiveSummary: z.string().min(1, "Executive Summary is required"),
   architectureStyle: z.string().min(1, "Architecture Style is required"),
   hybridCloudStrategy: z.string().min(1, "Hybrid Cloud Strategy is required"),
-  
-  systemAnalysis: z.object({
-    legacyStatusAssessment: z.string().default(""),
-    improvementPath: z.string().default(""),
-    businessGoalAlignment: z.string().default("")
-  }).default({
-    legacyStatusAssessment: "",
-    improvementPath: "",
-    businessGoalAlignment: ""
-  }),
 
-  itStrategyRoadmap: z.object({
-    phase1ShortTerm: z.string().default(""),
-    phase2MidTerm: z.string().default(""),
-    phase3LongTerm: z.string().default(""),
-    futureGrowthAdaptability: z.string().default("")
-  }).default({
-    phase1ShortTerm: "",
-    phase2MidTerm: "",
-    phase3LongTerm: "",
-    futureGrowthAdaptability: ""
-  }),
+  systemAnalysis: z
+    .object({
+      legacyStatusAssessment: z.string().default(""),
+      improvementPath: z.string().default(""),
+      businessGoalAlignment: z.string().default(""),
+    })
+    .default({
+      legacyStatusAssessment: "",
+      improvementPath: "",
+      businessGoalAlignment: "",
+    }),
 
-  riskManagementPlan: z.object({
-    riskIdentification: z.string().default(""),
-    threatMitigationControls: z.string().default(""),
-    businessContinuityPlan: z.string().default("")
-  }).default({
-    riskIdentification: "",
-    threatMitigationControls: "",
-    businessContinuityPlan: ""
-  }),
+  itStrategyRoadmap: z
+    .object({
+      phase1ShortTerm: z.string().default(""),
+      phase2MidTerm: z.string().default(""),
+      phase3LongTerm: z.string().default(""),
+      futureGrowthAdaptability: z.string().default(""),
+    })
+    .default({
+      phase1ShortTerm: "",
+      phase2MidTerm: "",
+      phase3LongTerm: "",
+      futureGrowthAdaptability: "",
+    }),
+
+  riskManagementPlan: z
+    .object({
+      riskIdentification: z.string().default(""),
+      threatMitigationControls: z.string().default(""),
+      businessContinuityPlan: z.string().default(""),
+    })
+    .default({
+      riskIdentification: "",
+      threatMitigationControls: "",
+      businessContinuityPlan: "",
+    }),
 
   nodes: z.array(NodeSchema).min(1, "At least one topology node is required"),
   connections: z.array(ConnectionSchema).default([]),
   bottlenecks: z.array(BottleneckSchema).default([]),
   securityRisks: z.array(SecurityRiskSchema).default([]),
   costOptimization: z.array(CostOptimizationSchema).default([]),
-  techComparison: z.array(TechComparisonSchema).default([])
+  techComparison: z.array(TechComparisonSchema).default([]),
 });
 
 export type ArchitectureResponse = z.infer<typeof ArchitectureResponseSchema>;

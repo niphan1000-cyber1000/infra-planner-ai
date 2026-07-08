@@ -14,8 +14,11 @@ export const requestStore = new AsyncLocalStorage<string>();
  * Binds every request to an AsyncLocalStorage context so all nested logs automatically trace back to it.
  */
 export const correlationIdMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  const requestId = (req.headers["x-request-id"] as string) || (req.headers["x-correlation-id"] as string) || crypto.randomUUID();
-  
+  const requestId =
+    (req.headers["x-request-id"] as string) ||
+    (req.headers["x-correlation-id"] as string) ||
+    crypto.randomUUID();
+
   // Back-propagate headers for tracking
   req.headers["x-request-id"] = requestId;
   req.headers["x-correlation-id"] = requestId;
@@ -32,7 +35,8 @@ export const correlationIdMiddleware = (req: Request, res: Response, next: NextF
  * Generate a cryptographically secure random 32-character hex token at boot
  * if no custom CACHE_CLEAR_TOKEN is configured in the environment.
  */
-export const runtimeCacheClearToken = process.env.CACHE_CLEAR_TOKEN || crypto.randomBytes(16).toString("hex");
+export const runtimeCacheClearToken =
+  process.env.CACHE_CLEAR_TOKEN || crypto.randomBytes(16).toString("hex");
 
 /**
  * Rate limiter for heavy system architecture analysis (strict limit)
@@ -45,7 +49,7 @@ export const architectureLimiter = rateLimit({
   legacyHeaders: false,
   message: {
     error: "คุณส่งคำขอวิเคราะห์สถาปัตยกรรมมากเกินไปในระบบกรุณารอ 15 นาทีก่อนลองใหม่อีกครั้ง",
-  }
+  },
 });
 
 /**
@@ -59,7 +63,7 @@ export const chatLimiter = rateLimit({
   legacyHeaders: false,
   message: {
     error: "คุณส่งคำขอแชทกับผู้ช่วยมากเกินไปในระบบกรุณารอ 15 นาทีก่อนลองใหม่อีกครั้ง",
-  }
+  },
 });
 
 /**
@@ -73,8 +77,17 @@ export const cacheClearLimiter = rateLimit({
   legacyHeaders: false,
   message: {
     error: "คุณส่งคำขอล้างข้อมูลแคชบ่อยเกินไป กรุณารอ 1 ชั่วโมงก่อนลองใหม่อีกครั้ง",
-  }
+  },
 });
+
+/**
+ * Cryptographically secure constant-time string comparison helper to prevent timing attacks.
+ */
+export const timingSafeCompare = (a: string, b: string): boolean => {
+  const hashA = crypto.createHash("sha256").update(a).digest();
+  const hashB = crypto.createHash("sha256").update(b).digest();
+  return crypto.timingSafeEqual(hashA, hashB);
+};
 
 /**
  * Authorization middleware for cache clearing.
@@ -86,15 +99,15 @@ export const validateCacheClearAuth = (req: Request, res: Response, next: NextFu
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({
       error: "Unauthorized",
-      details: "ต้องระบุสิทธิ์ผู้ดูแลระบบในรูปแบบ Bearer Token เพื่อล้างแคชระบบ"
+      details: "ต้องระบุสิทธิ์ผู้ดูแลระบบในรูปแบบ Bearer Token เพื่อล้างแคชระบบ",
     });
   }
 
   const token = authHeader.substring(7).trim();
-  if (token !== runtimeCacheClearToken) {
+  if (!timingSafeCompare(token, runtimeCacheClearToken)) {
     return res.status(403).json({
       error: "Forbidden",
-      details: "รหัสผ่านผู้ดูแลระบบสำหรับล้างแคชไม่ถูกต้อง"
+      details: "รหัสผ่านผู้ดูแลระบบสำหรับล้างแคชไม่ถูกต้อง",
     });
   }
 
@@ -107,10 +120,10 @@ export const validateCacheClearAuth = (req: Request, res: Response, next: NextFu
 export const sanitizeInput = (text: string, maxLength = 1000): string => {
   if (typeof text !== "string") return "";
   let sanitized = text.trim().slice(0, maxLength);
-  
+
   // Neutralize potential HTML tag injections
   sanitized = sanitized.replace(/<[^>]*>?/gm, "");
-  
+
   return sanitized;
 };
 
@@ -138,7 +151,7 @@ const PROMPT_INJECTION_PATTERNS = [
   /pretend\s+to\s+be/i,
   /you\s+must\s+(?:forget|ignore)/i,
   /assistant\s+instructions/i,
-  
+
   // Thai Patterns
   /ละเว้นคำสั่ง/i,
   /ข้ามคำสั่ง/i,
@@ -170,7 +183,7 @@ export const hasPromptInjectionAttempt = (text: string): boolean => {
  */
 export const hasOutputLeakage = (text: string): boolean => {
   if (typeof text !== "string") return false;
-  
+
   const leakPatterns = [
     /CRITICAL SECURITY MANDATE/i,
     /USER_PROVIDED_DATA_/i,
@@ -180,7 +193,7 @@ export const hasOutputLeakage = (text: string): boolean => {
     /CACHE_CLEAR_TOKEN/i,
     /AIzaSy[A-Za-z0-9_-]{30,40}/, // Google API Key pattern
   ];
-  
+
   return leakPatterns.some((pattern) => pattern.test(text));
 };
 
@@ -218,26 +231,29 @@ const winstonLogger = winston.createLogger({
           winston.format.colorize(),
           winston.format.printf(({ timestamp, level, message, ...metadata }) => {
             let metaStr = "";
-            const reqId = metadata.requestId && metadata.requestId !== "N/A" ? ` [Request ID: ${metadata.requestId}]` : "";
-            
+            const reqId =
+              metadata.requestId && metadata.requestId !== "N/A"
+                ? ` [Request ID: ${metadata.requestId}]`
+                : "";
+
             // Extract core fields to print them beautifully
             const errVal = metadata.error;
             const stackVal = metadata.stack;
             const causeVal = metadata.cause;
-            
+
             // Clean metadata of extracted fields
             const cleanMeta = { ...metadata };
             delete cleanMeta.requestId;
             delete cleanMeta.error;
             delete cleanMeta.stack;
             delete cleanMeta.cause;
-            
+
             if (Object.keys(cleanMeta).length) {
               metaStr = ` ${JSON.stringify(cleanMeta)}`;
             }
-            
+
             let logLine = `[${level}] ${timestamp}${reqId} - ${message}${metaStr}`;
-            
+
             if (errVal) {
               logLine += `\n  Details: ${errVal}`;
             }
@@ -251,9 +267,7 @@ const winstonLogger = winston.createLogger({
           })
         )
   ),
-  transports: [
-    new winston.transports.Console()
-  ]
+  transports: [new winston.transports.Console()],
 });
 
 /**
@@ -282,15 +296,16 @@ export const logger = {
   error: (message: string, error?: any) => {
     const requestId = requestStore.getStore();
     let metaPayload: any = { requestId: requestId || "N/A" };
-    
+
     if (error instanceof Error) {
       metaPayload.error = error.message;
       metaPayload.stack = filterStack(error.stack);
       if ((error as any).cause) {
         const nestedCause = (error as any).cause;
-        metaPayload.cause = nestedCause instanceof Error
-          ? { message: nestedCause.message, stack: filterStack(nestedCause.stack) }
-          : nestedCause;
+        metaPayload.cause =
+          nestedCause instanceof Error
+            ? { message: nestedCause.message, stack: filterStack(nestedCause.stack) }
+            : nestedCause;
       }
     } else if (error && typeof error === "object") {
       metaPayload.error = error.message || error.error || JSON.stringify(error);
@@ -309,7 +324,7 @@ export const logger = {
     } else if (error) {
       metaPayload.error = String(error);
     }
-    
+
     winstonLogger.error(message, metaPayload);
-  }
+  },
 };

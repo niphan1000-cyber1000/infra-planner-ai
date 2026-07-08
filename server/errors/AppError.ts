@@ -46,7 +46,7 @@ export const isTransientError = (error: any): boolean => {
   if (error instanceof AppError) {
     return error.isTransient;
   }
-  
+
   const errorMessage = (error?.message || String(error)).toLowerCase();
   const status = error?.status || error?.statusCode;
   const errorCode = error?.code;

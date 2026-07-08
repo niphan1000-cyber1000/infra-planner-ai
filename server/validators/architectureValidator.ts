@@ -20,7 +20,8 @@ export const validateArchitectureRequest = (req: Request, res: Response, next: N
       hasPromptInjectionAttempt(req.body.extraDescription)
     ) {
       return res.status(400).json({
-        error: "ตรวจพบข้อความที่มีความเสี่ยงความปลอดภัยสูงสุด (Prompt Injection Detected) กรุณาหลีกเลี่ยงการใช้คำสั่งที่ควบคุมสิทธิ์การทำงานของระบบ"
+        error:
+          "ตรวจพบข้อความที่มีความเสี่ยงความปลอดภัยสูงสุด (Prompt Injection Detected) กรุณาหลีกเลี่ยงการใช้คำสั่งที่ควบคุมสิทธิ์การทำงานของระบบ",
       });
     }
 
@@ -68,17 +69,28 @@ export const validateArchitectureRequest = (req: Request, res: Response, next: N
 export const validateChatRequest = (req: Request, res: Response, next: NextFunction) => {
   try {
     // 1. Validate requirements and currentReport context for prompt injection
-    if (req.body.requirements && hasPromptInjectionAttempt(String(req.body.requirements))) {
-      return res.status(400).json({
-        error: "ตรวจพบข้อความที่มีความเสี่ยงความปลอดภัยสูง (Prompt Injection Detected) ในความต้องการระบบ"
-      });
+    if (req.body.requirements) {
+      const reqStr =
+        typeof req.body.requirements === "object"
+          ? JSON.stringify(req.body.requirements)
+          : String(req.body.requirements);
+      if (hasPromptInjectionAttempt(reqStr)) {
+        return res.status(400).json({
+          error:
+            "ตรวจพบข้อความที่มีความเสี่ยงความปลอดภัยสูง (Prompt Injection Detected) ในความต้องการระบบ",
+        });
+      }
     }
 
     if (req.body.currentReport) {
-      const reportStr = typeof req.body.currentReport === "object" ? JSON.stringify(req.body.currentReport) : String(req.body.currentReport);
+      const reportStr =
+        typeof req.body.currentReport === "object"
+          ? JSON.stringify(req.body.currentReport)
+          : String(req.body.currentReport);
       if (hasPromptInjectionAttempt(reportStr)) {
         return res.status(400).json({
-          error: "ตรวจพบข้อความที่มีความเสี่ยงความปลอดภัยสูง (Prompt Injection Detected) ในข้อมูลบริบรายงานสถาปัตยกรรม"
+          error:
+            "ตรวจพบข้อความที่มีความเสี่ยงความปลอดภัยสูง (Prompt Injection Detected) ในข้อมูลบริบรายงานสถาปัตยกรรม",
         });
       }
     }
@@ -92,19 +104,24 @@ export const validateChatRequest = (req: Request, res: Response, next: NextFunct
     // 2.1 Check for Prompt Injection on chat message input
     if (hasPromptInjectionAttempt(req.body.newMessage)) {
       return res.status(400).json({
-        error: "ตรวจพบข้อความที่มีความเสี่ยงความปลอดภัยสูง (Prompt Injection Detected) กรุณาหลีกเลี่ยงการใช้คำสั่งที่พยายามควบคุมระบบหรือบทบาทของปัญญาประดิษฐ์"
+        error:
+          "ตรวจพบข้อความที่มีความเสี่ยงความปลอดภัยสูง (Prompt Injection Detected) กรุณาหลีกเลี่ยงการใช้คำสั่งที่พยายามควบคุมระบบหรือบทบาทของปัญญาประดิษฐ์",
       });
     }
 
     // 3. Validate messages array if provided
     if (req.body.messages !== undefined) {
       if (!Array.isArray(req.body.messages)) {
-        return res.status(400).json({ error: "ประวัติข้อความแชทต้องอยู่ในรูปแบบของรายการ (Array)" });
+        return res
+          .status(400)
+          .json({ error: "ประวัติข้อความแชทต้องอยู่ในรูปแบบของรายการ (Array)" });
       }
-      
+
       // Limit size of history to prevent abuse or memory load (max 50 messages)
       if (req.body.messages.length > 50) {
-        return res.status(400).json({ error: "ประวัติข้อความแชทเกินขีดจำกัดความยาวสูงสุด (สูงสุด 50 ข้อความ)" });
+        return res
+          .status(400)
+          .json({ error: "ประวัติข้อความแชทเกินขีดจำกัดความยาวสูงสุด (สูงสุด 50 ข้อความ)" });
       }
 
       // Sanitize each history entry and check for prompt injection
@@ -112,9 +129,9 @@ export const validateChatRequest = (req: Request, res: Response, next: NextFunct
         if (!msg || typeof msg !== "object") {
           return { sender: "user", text: "", time: "" };
         }
-        
+
         const text = sanitizeInput(String(msg.text || ""), 2000);
-        
+
         if (hasPromptInjectionAttempt(text)) {
           throw new Error("PROMPT_INJECTION_HISTORY_DETECTED");
         }
@@ -131,7 +148,8 @@ export const validateChatRequest = (req: Request, res: Response, next: NextFunct
   } catch (err: any) {
     if (err && err.message === "PROMPT_INJECTION_HISTORY_DETECTED") {
       return res.status(400).json({
-        error: "ตรวจพบข้อความที่มีความเสี่ยงความปลอดภัยสูง (Prompt Injection Detected) ในข้อมูลประวัติการแชท"
+        error:
+          "ตรวจพบข้อความที่มีความเสี่ยงความปลอดภัยสูง (Prompt Injection Detected) ในข้อมูลประวัติการแชท",
       });
     }
     res.status(400).json({ error: "ข้อมูลข้อความแชทไม่ถูกต้องตามมาตรฐานความปลอดภัย" });

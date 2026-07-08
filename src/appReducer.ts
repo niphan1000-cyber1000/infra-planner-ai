@@ -1,4 +1,9 @@
-import { ArchitectureRequirements, ArchitectureReport, TopologyNode, SimulationResult } from "./types";
+import {
+  ArchitectureRequirements,
+  ArchitectureReport,
+  TopologyNode,
+  SimulationResult,
+} from "./types";
 
 export interface Message {
   sender: "user" | "ai";
@@ -47,7 +52,7 @@ export const initialRequirements: ArchitectureRequirements = {
   existingTech: "On-Premises Legacy DB",
   extraDescription: "ต้องการระบบที่ป้องกันการโจมตีทางไซเบอร์ และรองรับการขยายตัวได้ดี",
   itGoal: "modernize",
-  riskFocus: "strict"
+  riskFocus: "strict",
 };
 
 export const initialState: AppState = {
@@ -60,14 +65,14 @@ export const initialState: AppState = {
   isSimulating: false,
   chatOpen: false,
   messages: [
-    { 
-      sender: "ai", 
-      text: "สวัสดีครับ! ผมคือ Enterprise IT Architect AI ยินดีให้คำแนะนำเกี่ยวกับสถาปัตยกรรมระบบไอทีและกลยุทธ์คลาวด์ของคุณ คุณสามารถเลือก Template สำเร็จรูปด้านซ้าย หรือกรอกรายละเอียดเพื่อวิเคราะห์โครงสร้างระบบแบบเจาะลึกได้ทันทีครับ", 
-      time: "21:44" 
-    }
+    {
+      sender: "ai",
+      text: "สวัสดีครับ! ผมคือ Enterprise IT Architect AI ยินดีให้คำแนะนำเกี่ยวกับสถาปัตยกรรมระบบไอทีและกลยุทธ์คลาวด์ของคุณ คุณสามารถเลือก Template สำเร็จรูปด้านซ้าย หรือกรอกรายละเอียดเพื่อวิเคราะห์โครงสร้างระบบแบบเจาะลึกได้ทันทีครับ",
+      time: "21:44",
+    },
   ],
   newMessage: "",
-  chatLoading: false
+  chatLoading: false,
 };
 
 export function appReducer(state: AppState, action: AppAction): AppState {
@@ -77,19 +82,19 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         requirements: {
           ...state.requirements,
-          [action.field]: action.value
-        }
+          [action.field]: action.value,
+        },
       };
     case "TOGGLE_COMPLIANCE": {
       const updated = state.requirements.compliance.includes(action.compliance)
-        ? state.requirements.compliance.filter(c => c !== action.compliance)
+        ? state.requirements.compliance.filter((c) => c !== action.compliance)
         : [...state.requirements.compliance, action.compliance];
       return {
         ...state,
         requirements: {
           ...state.requirements,
-          compliance: updated
-        }
+          compliance: updated,
+        },
       };
     }
     case "APPLY_PRESET":
@@ -100,7 +105,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         selectedNode: null,
         simResult: null,
         simScenario: "normal",
-        isSimulating: false
+        isSimulating: false,
       };
     case "START_ANALYSIS":
       return {
@@ -109,83 +114,84 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         selectedNode: null,
         simResult: null,
         simScenario: "normal",
-        isSimulating: false
+        isSimulating: false,
       };
     case "ANALYSIS_SUCCESS":
       return {
         ...state,
         loading: false,
         report: action.report,
-        selectedNode: action.report.nodes && action.report.nodes.length > 0 ? action.report.nodes[0] : null,
+        selectedNode:
+          action.report.nodes && action.report.nodes.length > 0 ? action.report.nodes[0] : null,
         messages: [
           ...state.messages,
           {
             sender: "ai",
             text: action.welcomeMessageText,
-            time: new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })
-          }
-        ]
+            time: new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }),
+          },
+        ],
       };
     case "ANALYSIS_FAILURE":
       return {
         ...state,
-        loading: false
+        loading: false,
       };
     case "SET_SELECTED_NODE":
       return {
         ...state,
-        selectedNode: action.node
+        selectedNode: action.node,
       };
     case "START_STRESS_SIMULATION":
       return {
         ...state,
         isSimulating: true,
-        simScenario: action.scenario
+        simScenario: action.scenario,
       };
     case "FINISH_STRESS_SIMULATION":
       return {
         ...state,
         isSimulating: false,
-        simResult: action.simResult
+        simResult: action.simResult,
       };
     case "TOGGLE_CHAT":
       return {
         ...state,
-        chatOpen: !state.chatOpen
+        chatOpen: !state.chatOpen,
       };
     case "OPEN_CHAT":
       return {
         ...state,
-        chatOpen: true
+        chatOpen: true,
       };
     case "SET_NEW_MESSAGE":
       return {
         ...state,
-        newMessage: action.value
+        newMessage: action.value,
       };
     case "SEND_CHAT_MESSAGE":
       return {
         ...state,
         newMessage: "",
         messages: [...state.messages, action.userMsgObj],
-        chatLoading: true
+        chatLoading: true,
       };
     case "CHAT_MESSAGE_SUCCESS":
       return {
         ...state,
         messages: [...state.messages, action.aiMsgObj],
-        chatLoading: false
+        chatLoading: false,
       };
     case "CHAT_MESSAGE_FAILURE":
       return {
         ...state,
         messages: [...state.messages, action.aiErrorMsgObj],
-        chatLoading: false
+        chatLoading: false,
       };
     case "SET_CHAT_LOADING":
       return {
         ...state,
-        chatLoading: action.loading
+        chatLoading: action.loading,
       };
     default:
       return state;

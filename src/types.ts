@@ -13,11 +13,20 @@ export interface ArchitectureRequirements {
 export interface TopologyNode {
   id: string;
   name: string;
-  category: 'ingress' | 'security' | 'gateway' | 'compute' | 'cache' | 'database' | 'queue' | 'integration' | 'other';
+  category:
+    | "ingress"
+    | "security"
+    | "gateway"
+    | "compute"
+    | "cache"
+    | "database"
+    | "queue"
+    | "integration"
+    | "other";
   serviceName: string; // e.g. Amazon CloudFront, Azure WAF, On-Premises DB
   details: string; // Specifications like "Multi-AZ, Auto-scaling, SSL termination"
-  status: 'secure' | 'warning' | 'critical';
-  provider: 'aws' | 'azure' | 'gcp' | 'hybrid' | 'on-premise';
+  status: "secure" | "warning" | "critical";
+  provider: "aws" | "azure" | "gcp" | "hybrid" | "on-premise";
   description: string;
 }
 
@@ -31,7 +40,7 @@ export interface BottleneckItem {
   id: string;
   title: string;
   description: string;
-  severity: 'high' | 'medium' | 'low';
+  severity: "high" | "medium" | "low";
   solution: string;
 }
 
@@ -39,7 +48,7 @@ export interface SecurityRiskItem {
   id: string;
   title: string;
   description: string;
-  severity: 'high' | 'medium' | 'low';
+  severity: "high" | "medium" | "low";
   mitigation: string;
 }
 
@@ -101,13 +110,13 @@ export interface SimulationMetric {
   value: number;
   max: number;
   unit: string;
-  status: 'normal' | 'warning' | 'danger';
+  status: "normal" | "warning" | "danger";
 }
 
 export interface SimulationResult {
   eventName: string;
   isSuccessful: boolean;
-  systemStatus: 'healthy' | 'degraded' | 'failed';
+  systemStatus: "healthy" | "degraded" | "failed";
   log: string[];
   metrics: {
     latency: number;

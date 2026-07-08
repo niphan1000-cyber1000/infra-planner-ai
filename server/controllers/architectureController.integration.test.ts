@@ -30,9 +30,7 @@ describe("Architecture Controller - Full Integration Lifecycle", () => {
 
   describe("GET /api/health/readiness", () => {
     it("should return 200 status code when backend and downstream APIs are healthy", async () => {
-      const res = await request(app)
-        .get("/api/health/readiness")
-        .expect(200);
+      const res = await request(app).get("/api/health/readiness").expect(200);
 
       expect(res.body).toHaveProperty("status", "ready");
       expect(res.body.dependencies).toHaveProperty("gemini", "healthy");
@@ -62,36 +60,68 @@ describe("Architecture Controller - Full Integration Lifecycle", () => {
         systemAnalysis: {
           legacyStatusAssessment: "วิเคราะห์ระบบเดิม",
           improvementPath: "เส้นทางการอัปเกรด",
-          businessGoalAlignment: "สอดคล้องเป้าหมายธุรกิจ"
+          businessGoalAlignment: "สอดคล้องเป้าหมายธุรกิจ",
         },
         itStrategyRoadmap: {
           phase1ShortTerm: "ระยะสั้น",
           phase2MidTerm: "ระยะกลาง",
           phase3LongTerm: "ระยะยาว",
-          futureGrowthAdaptability: "การขยายตัว"
+          futureGrowthAdaptability: "การขยายตัว",
         },
         riskManagementPlan: {
           riskIdentification: "ความเสี่ยงหลัก",
           threatMitigationControls: "การควบคุมความเสี่ยง",
-          businessContinuityPlan: "แผนบีซีพี"
+          businessContinuityPlan: "แผนบีซีพี",
         },
         nodes: [
-          { id: "node1", name: "เซิร์ฟเวอร์เว็บ", category: "compute", serviceName: "ECS", details: "Auto-scaled", status: "secure", provider: "aws", description: "เครื่องหลัก" }
+          {
+            id: "node1",
+            name: "เซิร์ฟเวอร์เว็บ",
+            category: "compute",
+            serviceName: "ECS",
+            details: "Auto-scaled",
+            status: "secure",
+            provider: "aws",
+            description: "เครื่องหลัก",
+          },
         ],
-        connections: [
-          { from: "node1", to: "node1", label: "Self loop" }
-        ],
+        connections: [{ from: "node1", to: "node1", label: "Self loop" }],
         bottlenecks: [
-          { id: "b1", title: "คอขวด", description: "รายละเอียด", severity: "medium", solution: "แก้ไขคอขวด" }
+          {
+            id: "b1",
+            title: "คอขวด",
+            description: "รายละเอียด",
+            severity: "medium",
+            solution: "แก้ไขคอขวด",
+          },
         ],
         securityRisks: [
-          { id: "s1", title: "ความมั่นคงปลอดภัย", description: "รายละเอียดภัยคุกคาม", severity: "high", mitigation: "วิธีบรรเทา" }
+          {
+            id: "s1",
+            title: "ความมั่นคงปลอดภัย",
+            description: "รายละเอียดภัยคุกคาม",
+            severity: "high",
+            mitigation: "วิธีบรรเทา",
+          },
         ],
         costOptimization: [
-          { item: "ประหยัดต้นทุน", currentEstimate: "100$", hybridStrategy: "ลดพอร์ต", potentialSavings: "50%" }
+          {
+            item: "ประหยัดต้นทุน",
+            currentEstimate: "100$",
+            hybridStrategy: "ลดพอร์ต",
+            potentialSavings: "50%",
+          },
         ],
         techComparison: [
-          { category: "Compute", awsProduct: "ECS", azureProduct: "Container Apps", gcpProduct: "Cloud Run", hybridApproach: "K8s", pros: "ข้อดี", cons: "ข้อเสีย" }
+          {
+            category: "Compute",
+            awsProduct: "ECS",
+            azureProduct: "Container Apps",
+            gcpProduct: "Cloud Run",
+            hybridApproach: "K8s",
+            pros: "ข้อดี",
+            cons: "ข้อเสีย",
+          },
         ],
         cacheStatus: "miss",
         cacheKey: "mock-key",
@@ -120,14 +150,16 @@ describe("Architecture Controller - Full Integration Lifecycle", () => {
       expect(res.headers).toHaveProperty("x-request-id", "test-req-correlation-123");
       expect(res.body).toHaveProperty("architectureStyle", "Microservices Hybrid Architecture");
       expect(res.body).toHaveProperty("cacheStatus", "miss");
-      expect(geminiService.analyzeArchitecture).toHaveBeenCalledWith(expect.objectContaining({
-        businessType: "ระบบ E-Commerce ยอดขายสูง",
-        userVolume: "medium",
-        budget: "balanced",
-        cloudPreference: "hybrid",
-        itGoal: "security",
-        riskFocus: "strict",
-      }));
+      expect(geminiService.analyzeArchitecture).toHaveBeenCalledWith(
+        expect.objectContaining({
+          businessType: "ระบบ E-Commerce ยอดขายสูง",
+          userVolume: "medium",
+          budget: "balanced",
+          cloudPreference: "hybrid",
+          itGoal: "security",
+          riskFocus: "strict",
+        })
+      );
     });
   });
 
@@ -137,7 +169,7 @@ describe("Architecture Controller - Full Integration Lifecycle", () => {
         .post("/api/chat-advisor")
         .send({
           newMessage: "สวัสดีครับ",
-          messages: "ไม่ใช่ array"
+          messages: "ไม่ใช่ array",
         })
         .expect(400);
 
@@ -148,22 +180,17 @@ describe("Architecture Controller - Full Integration Lifecycle", () => {
       const mockChatReply = {
         reply: "คำแนะนำจาก AI Advisor จำลอง",
         cacheStatus: "miss",
-        cacheKey: "chat-mock-key"
+        cacheKey: "chat-mock-key",
       };
 
       vi.spyOn(geminiService, "consultChatAdvisor").mockResolvedValue(mockChatReply);
 
       const payload = {
         newMessage: "อยากทราบเกี่ยวกับ VPN",
-        messages: [
-          { sender: "user", text: "แนะนำหน่อย" }
-        ]
+        messages: [{ sender: "user", text: "แนะนำหน่อย" }],
       };
 
-      const res = await request(app)
-        .post("/api/chat-advisor")
-        .send(payload)
-        .expect(200);
+      const res = await request(app).post("/api/chat-advisor").send(payload).expect(200);
 
       expect(res.body).toHaveProperty("reply", "คำแนะนำจาก AI Advisor จำลอง");
       expect(res.body).toHaveProperty("cacheStatus", "miss");

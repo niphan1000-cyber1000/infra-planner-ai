@@ -33,16 +33,22 @@ export default class ErrorBoundary extends React.Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <div id="error_boundary_fallback" className="min-h-screen bg-[#02040a] text-slate-100 flex flex-col items-center justify-center p-6 select-none font-sans">
+        <div
+          id="error_boundary_fallback"
+          className="min-h-screen bg-[#02040a] text-slate-100 flex flex-col items-center justify-center p-6 select-none font-sans"
+        >
           <div className="max-w-md w-full bg-[#05080f] border border-rose-500/20 rounded-2xl p-6 shadow-2xl text-center space-y-5">
             <div className="mx-auto w-12 h-12 rounded-full bg-rose-500/10 flex items-center justify-center border border-rose-500/20">
               <AlertTriangle className="w-6 h-6 text-rose-500 animate-bounce" />
             </div>
-            
+
             <div className="space-y-2">
-              <h1 className="text-lg font-bold text-white uppercase tracking-wide">เกิดข้อผิดพลาดในการประมวลผล UI</h1>
+              <h1 className="text-lg font-bold text-white uppercase tracking-wide">
+                เกิดข้อผิดพลาดในการประมวลผล UI
+              </h1>
               <p className="text-xs text-slate-400 leading-relaxed">
-                ระบบสวมบทบาทสถาปนิกไอทีตรวจพบความขัดข้องในโครงสร้างส่วนการแสดงผล (Renderer Engine) กรุณาลองรีเซ็ตสถานะหน้าจออีกครั้ง
+                ระบบสวมบทบาทสถาปนิกไอทีตรวจพบความขัดข้องในโครงสร้างส่วนการแสดงผล (Renderer Engine)
+                กรุณาลองรีเซ็ตสถานะหน้าจออีกครั้ง
               </p>
             </div>
 

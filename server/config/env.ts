@@ -27,10 +27,19 @@ try {
 } catch (error: any) {
   if (error instanceof z.ZodError) {
     logger.error("❌ Environment validation failed:", error.format());
-    console.error("\x1b[31m%s\x1b[0m", "================================================================");
-    console.error("\x1b[31m%s\x1b[0m", "FATAL STARTUP ERROR: Environment Validation Failed via Zod.");
+    console.error(
+      "\x1b[31m%s\x1b[0m",
+      "================================================================"
+    );
+    console.error(
+      "\x1b[31m%s\x1b[0m",
+      "FATAL STARTUP ERROR: Environment Validation Failed via Zod."
+    );
     console.error(JSON.stringify(error.format(), null, 2));
-    console.error("\x1b[31m%s\x1b[0m", "================================================================");
+    console.error(
+      "\x1b[31m%s\x1b[0m",
+      "================================================================"
+    );
   } else {
     logger.error("❌ Unexpected environment validation error:", error);
   }

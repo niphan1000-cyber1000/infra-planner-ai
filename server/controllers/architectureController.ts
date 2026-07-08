@@ -13,7 +13,7 @@ const mapErrorToResponse = (error: any, defaultMessage: string) => {
     return {
       statusCode: error.statusCode,
       error: error.name === "AppError" ? "เกิดข้อผิดพลาดในการประมวลผลระบบ" : error.message,
-      details: error.message
+      details: error.message,
     };
   }
 
@@ -31,7 +31,7 @@ const mapErrorToResponse = (error: any, defaultMessage: string) => {
     return {
       statusCode: 429,
       error: "เกินโควตาการใช้งานชั่วคราว (Rate Limit / Quota Exceeded)",
-      details: "ความต้องการใช้บริการสูงเกินกำหนดในขณะนี้ กรุณารอประมาณ 1 นาทีแล้วลองใหม่อีกครั้ง"
+      details: "ความต้องการใช้บริการสูงเกินกำหนดในขณะนี้ กรุณารอประมาณ 1 นาทีแล้วลองใหม่อีกครั้ง",
     };
   }
 
@@ -50,7 +50,8 @@ const mapErrorToResponse = (error: any, defaultMessage: string) => {
     return {
       statusCode: 503,
       error: "การเชื่อมต่อระบบบริการ AI หมดเวลาชั่วคราว (Service Timeout / Unavailable)",
-      details: "ระบบประมวลผลใช้เวลานานเกินกำหนด หรือเซิร์ฟเวอร์ของ Gemini มีผู้ใช้งานหนาแน่นในขณะนี้ กรุณาลองใหม่อีกครั้ง"
+      details:
+        "ระบบประมวลผลใช้เวลานานเกินกำหนด หรือเซิร์ฟเวอร์ของ Gemini มีผู้ใช้งานหนาแน่นในขณะนี้ กรุณาลองใหม่อีกครั้ง",
     };
   }
 
@@ -69,7 +70,8 @@ const mapErrorToResponse = (error: any, defaultMessage: string) => {
     return {
       statusCode: 401,
       error: "การยืนยันตัวตนล้มเหลว (Unauthorized)",
-      details: "สิทธิ์การเข้าใช้งานระบบหรือ API Key ไม่ถูกต้อง โปรดติดต่อผู้ดูแลระบบเพื่อตรวจสอบความถูกต้องหลังบ้าน"
+      details:
+        "สิทธิ์การเข้าใช้งานระบบหรือ API Key ไม่ถูกต้อง โปรดติดต่อผู้ดูแลระบบเพื่อตรวจสอบความถูกต้องหลังบ้าน",
     };
   }
 
@@ -88,9 +90,10 @@ const mapErrorToResponse = (error: any, defaultMessage: string) => {
     return {
       statusCode: 400,
       error: "ข้อมูลนำเข้าหรือผลลัพธ์ไม่ถูกต้อง (Bad Request / Validation Error)",
-      details: errorMessage.includes("ความมั่นคงปลอดภัย") || errorMessage.includes("ความปลอดภัย")
-        ? errorMessage
-        : "ข้อมูลอินพุตหรือคำตอบที่ได้รับไม่สอดคล้องกับโครงสร้างที่กำหนด โปรดตรวจสอบข้อมูลนำเข้าแล้วลองใหม่อีกครั้ง"
+      details:
+        errorMessage.includes("ความมั่นคงปลอดภัย") || errorMessage.includes("ความปลอดภัย")
+          ? errorMessage
+          : "ข้อมูลอินพุตหรือคำตอบที่ได้รับไม่สอดคล้องกับโครงสร้างที่กำหนด โปรดตรวจสอบข้อมูลนำเข้าแล้วลองใหม่อีกครั้ง",
     };
   }
 
@@ -98,7 +101,8 @@ const mapErrorToResponse = (error: any, defaultMessage: string) => {
   return {
     statusCode: 500,
     error: defaultMessage,
-    details: "ระบบขัดข้องชั่วคราว โปรดตรวจสอบรายงานความผิดพลาดจากเซิร์ฟเวอร์ หรือลองใหม่อีกครั้งในภายหลัง"
+    details:
+      "ระบบขัดข้องชั่วคราว โปรดตรวจสอบรายงานความผิดพลาดจากเซิร์ฟเวอร์ หรือลองใหม่อีกครั้งในภายหลัง",
   };
 };
 
@@ -116,7 +120,7 @@ export const handleAnalyzeArchitecture = async (req: Request, res: Response) => 
       extraDescription,
       itGoal,
       riskFocus,
-      compliance
+      compliance,
     } = req.body;
 
     const reportJson = await geminiService.analyzeArchitecture({
@@ -128,7 +132,7 @@ export const handleAnalyzeArchitecture = async (req: Request, res: Response) => 
       extraDescription,
       itGoal,
       riskFocus,
-      compliance
+      compliance,
     });
 
     res.json(reportJson);
@@ -137,7 +141,7 @@ export const handleAnalyzeArchitecture = async (req: Request, res: Response) => 
     const mapped = mapErrorToResponse(error, "เกิดข้อผิดพลาดในการวิเคราะห์สถาปัตยกรรมระบบไอที");
     res.status(mapped.statusCode).json({
       error: mapped.error,
-      details: mapped.details
+      details: mapped.details,
     });
   }
 };
@@ -153,20 +157,20 @@ export const handleChatAdvisor = async (req: Request, res: Response) => {
       requirements,
       currentReport,
       messages,
-      newMessage
+      newMessage,
     });
 
     res.json({
       reply: result.reply,
       cacheStatus: result.cacheStatus,
-      cacheKey: result.cacheKey
+      cacheKey: result.cacheKey,
     });
   } catch (error: any) {
     logger.error("Error inside handleChatAdvisor controller:", error);
     const mapped = mapErrorToResponse(error, "เกิดข้อผิดพลาดในการประมวลผลข้อความแชท");
     res.status(mapped.statusCode).json({
       error: mapped.error,
-      details: mapped.details
+      details: mapped.details,
     });
   }
 };
@@ -179,14 +183,14 @@ export const handleClearCache = async (req: Request, res: Response) => {
     await cacheService.clear();
     res.json({
       status: "ok",
-      message: "ล้างข้อมูลแคชสำเร็จแล้ว (Cache flushed successfully)"
+      message: "ล้างข้อมูลแคชสำเร็จแล้ว (Cache flushed successfully)",
     });
   } catch (error: any) {
     logger.error("Error inside handleClearCache controller:", error);
     const mapped = mapErrorToResponse(error, "เกิดข้อผิดพลาดในการล้างข้อมูลแคช");
     res.status(mapped.statusCode).json({
       error: mapped.error,
-      details: mapped.details || error.message || error
+      details: mapped.details || error.message || error,
     });
   }
 };

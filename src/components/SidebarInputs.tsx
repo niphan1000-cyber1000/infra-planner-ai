@@ -1,34 +1,25 @@
 import React from "react";
-import { 
-  Sparkles, 
-  Sliders, 
-  Activity, 
-  CheckCircle, 
-  XCircle, 
-  Zap, 
-  Loader2 
-} from "lucide-react";
+import { Sparkles, Sliders, Activity, CheckCircle, XCircle, Zap, Loader2 } from "lucide-react";
 import { useAppContext } from "../hooks/useAppContext";
 import { PRESETS } from "../data/presets";
 
 export const SidebarInputs: React.FC = () => {
-  const {
-    state,
-    dispatch,
-    health,
-    triggerAnalysis,
-    handleApplyPreset
-  } = useAppContext();
+  const { state, dispatch, health, triggerAnalysis, handleApplyPreset } = useAppContext();
 
   const { requirements, loading } = state;
 
   return (
-    <aside id="sidebar_inputs" className="w-full lg:w-80 bg-[#05070a]/60 border-r border-white/5 p-5 flex flex-col gap-6 overflow-y-auto">
+    <aside
+      id="sidebar_inputs"
+      className="w-full lg:w-80 bg-[#05070a]/60 border-r border-white/5 p-5 flex flex-col gap-6 overflow-y-auto"
+    >
       <div>
         <h3 className="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-1">
           <Sparkles className="w-3.5 h-3.5" /> 1. เทมเพลตสถาปัตยกรรมแนะนำ
         </h3>
-        <p className="text-[11px] text-slate-400 mb-3">กดเลือกประเภทระบบธุรกิจจำลองเพื่อเริ่มวางระบบแบบรวดเร็ว</p>
+        <p className="text-[11px] text-slate-400 mb-3">
+          กดเลือกประเภทระบบธุรกิจจำลองเพื่อเริ่มวางระบบแบบรวดเร็ว
+        </p>
         <div className="space-y-2">
           {PRESETS.map((preset, idx) => (
             <button
@@ -40,9 +31,7 @@ export const SidebarInputs: React.FC = () => {
               <div className="text-[11px] text-indigo-300 font-bold group-hover:text-indigo-200 transition-colors">
                 {preset.name}
               </div>
-              <p className="text-[10px] text-slate-400 mt-1 line-clamp-2">
-                {preset.description}
-              </p>
+              <p className="text-[10px] text-slate-400 mt-1 line-clamp-2">{preset.description}</p>
             </button>
           ))}
         </div>
@@ -58,11 +47,19 @@ export const SidebarInputs: React.FC = () => {
 
         {/* Business Type */}
         <div>
-          <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">ประเภทธุรกิจ / บริการ</label>
+          <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">
+            ประเภทธุรกิจ / บริการ
+          </label>
           <input
             type="text"
             value={requirements.businessType}
-            onChange={(e) => dispatch({ type: "SET_REQUIREMENT_FIELD", field: "businessType", value: e.target.value })}
+            onChange={(e) =>
+              dispatch({
+                type: "SET_REQUIREMENT_FIELD",
+                field: "businessType",
+                value: e.target.value,
+              })
+            }
             placeholder="เช่น FinTech, E-Commerce, Logistics"
             className="w-full bg-[#0a0f18] border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
           />
@@ -70,10 +67,18 @@ export const SidebarInputs: React.FC = () => {
 
         {/* Scale Limit Selection */}
         <div>
-          <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">ปริมาณผู้ใช้งานเฉลี่ย / สถิติ</label>
+          <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">
+            ปริมาณผู้ใช้งานเฉลี่ย / สถิติ
+          </label>
           <select
             value={requirements.userVolume}
-            onChange={(e) => dispatch({ type: "SET_REQUIREMENT_FIELD", field: "userVolume", value: e.target.value })}
+            onChange={(e) =>
+              dispatch({
+                type: "SET_REQUIREMENT_FIELD",
+                field: "userVolume",
+                value: e.target.value,
+              })
+            }
             className="w-full bg-[#0a0f18] border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
           >
             <option value="low">ระดับเริ่มต้น - สตาร์ทอัพ (≤ 5,000 คน/วัน)</option>
@@ -85,17 +90,21 @@ export const SidebarInputs: React.FC = () => {
 
         {/* Budget */}
         <div>
-          <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">งบประมาณโครงสร้างพื้นฐาน</label>
+          <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">
+            งบประมาณโครงสร้างพื้นฐาน
+          </label>
           <div className="grid grid-cols-3 gap-1">
             {[
               { value: "low", label: "ประหยัดสูงสุด" },
               { value: "balanced", label: "สมดุลคุ้มค่า" },
-              { value: "unlimited", label: "ประสิทธิภาพสูง" }
+              { value: "unlimited", label: "ประสิทธิภาพสูง" },
             ].map((b) => (
               <button
                 key={b.value}
                 type="button"
-                onClick={() => dispatch({ type: "SET_REQUIREMENT_FIELD", field: "budget", value: b.value })}
+                onClick={() =>
+                  dispatch({ type: "SET_REQUIREMENT_FIELD", field: "budget", value: b.value })
+                }
                 className={`px-1 py-1.5 rounded text-[10px] font-medium border transition-all duration-200 ${
                   requirements.budget === b.value
                     ? "bg-indigo-600 border-indigo-400 text-white shadow-md shadow-indigo-600/10"
@@ -110,41 +119,75 @@ export const SidebarInputs: React.FC = () => {
 
         {/* Infrastructure Location Preference */}
         <div>
-          <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">คลาวด์/โครงสร้างที่เลือกใช้ (Preference)</label>
+          <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">
+            คลาวด์/โครงสร้างที่เลือกใช้ (Preference)
+          </label>
           <select
             value={requirements.cloudPreference}
-            onChange={(e) => dispatch({ type: "SET_REQUIREMENT_FIELD", field: "cloudPreference", value: e.target.value })}
+            onChange={(e) =>
+              dispatch({
+                type: "SET_REQUIREMENT_FIELD",
+                field: "cloudPreference",
+                value: e.target.value,
+              })
+            }
             className="w-full bg-[#0a0f18] border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
           >
             <option value="aws">Amazon Web Services (AWS)</option>
             <option value="gcp">Google Cloud Platform (GCP)</option>
             <option value="azure">Microsoft Azure (Azure)</option>
             <option value="hybrid">ระบบผสมคู่ขนาน (Hybrid Cloud & On-Premises)</option>
-            <option value="on-premise">โครงสร้างหลักองค์กรเอง (Private Data Center / On-Premise)</option>
+            <option value="on-premise">
+              โครงสร้างหลักองค์กรเอง (Private Data Center / On-Premise)
+            </option>
           </select>
         </div>
         <div>
-          <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">เป้าหมายด้านไอทีและธุรกิจ</label>
+          <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">
+            เป้าหมายด้านไอทีและธุรกิจ
+          </label>
           <select
             value={requirements.itGoal}
-            onChange={(e) => dispatch({ type: "SET_REQUIREMENT_FIELD", field: "itGoal", value: e.target.value })}
+            onChange={(e) =>
+              dispatch({ type: "SET_REQUIREMENT_FIELD", field: "itGoal", value: e.target.value })
+            }
             className="w-full bg-[#0a0f18] border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
           >
-            <option value="modernize">ปรับปรุงระบบเดิมและเชื่อมต่อ Legacy (Modernize Legacy)</option>
-            <option value="cloud_native">ย้ายข้อมูลสู่คลาวด์และทำ Cloud-Native (Migration to Cloud)</option>
-            <option value="high_availability">ต้องการความพร้อมใช้งานสูงและกระจายโหลด (HA & Multi-Region)</option>
-            <option value="cost_optimization">ลดค่าใช้จ่ายคลาวด์/ทรัพยากร (Cost Optimization)</option>
-            <option value="strict_security">ความปลอดภัยเข้มงวดและระบบที่มีกฎหมายกำกับ (Highly Regulated)</option>
-            <option value="zero_trust">สถาปัตยกรรม Zero-Trust & แผนฟื้นฟูภัยพิบัติ DR (Zero-Trust + DR)</option>
+            <option value="modernize">
+              ปรับปรุงระบบเดิมและเชื่อมต่อ Legacy (Modernize Legacy)
+            </option>
+            <option value="cloud_native">
+              ย้ายข้อมูลสู่คลาวด์และทำ Cloud-Native (Migration to Cloud)
+            </option>
+            <option value="high_availability">
+              ต้องการความพร้อมใช้งานสูงและกระจายโหลด (HA & Multi-Region)
+            </option>
+            <option value="cost_optimization">
+              ลดค่าใช้จ่ายคลาวด์/ทรัพยากร (Cost Optimization)
+            </option>
+            <option value="strict_security">
+              ความปลอดภัยเข้มงวดและระบบที่มีกฎหมายกำกับ (Highly Regulated)
+            </option>
+            <option value="zero_trust">
+              สถาปัตยกรรม Zero-Trust & แผนฟื้นฟูภัยพิบัติ DR (Zero-Trust + DR)
+            </option>
           </select>
         </div>
 
         {/* Extra requirements text */}
         <div>
-          <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">รายละเอียดเพิ่มเติม / ความปลอดภัยเฉพาะ</label>
+          <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">
+            รายละเอียดเพิ่มเติม / ความปลอดภัยเฉพาะ
+          </label>
           <textarea
             value={requirements.extraDescription}
-            onChange={(e) => dispatch({ type: "SET_REQUIREMENT_FIELD", field: "extraDescription", value: e.target.value })}
+            onChange={(e) =>
+              dispatch({
+                type: "SET_REQUIREMENT_FIELD",
+                field: "extraDescription",
+                value: e.target.value,
+              })
+            }
             rows={3}
             placeholder="ระบุความท้าทาย เช่น ปัญหาคอขวดที่เจอ, อุปสรรคเรื่องการเชื่อมต่อระบบเดิม หรือการเข้ารหัสข้อมูลที่ต้องใช้..."
             className="w-full bg-[#0a0f18] border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 resize-none"
@@ -176,7 +219,8 @@ export const SidebarInputs: React.FC = () => {
         <div className="bg-slate-900/40 border border-white/5 rounded-xl p-3.5 space-y-3.5">
           <div className="flex items-center justify-between">
             <h4 className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-              <Activity className="w-3.5 h-3.5 text-indigo-400 animate-pulse" /> 3. ความพร้อมและระบบแคช
+              <Activity className="w-3.5 h-3.5 text-indigo-400 animate-pulse" /> 3.
+              ความพร้อมและระบบแคช
             </h4>
             <span className="flex items-center gap-1 text-[9px] text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
               <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
@@ -189,9 +233,13 @@ export const SidebarInputs: React.FC = () => {
               {/* Status Badges */}
               <div className="grid grid-cols-2 gap-1.5">
                 <div className="bg-[#0a0f18] p-1.5 rounded border border-white/5 flex flex-col justify-between">
-                  <span className="text-[9px] text-slate-500 uppercase font-medium">Gemini Status</span>
-                  <span className={`font-bold mt-0.5 flex items-center gap-1 text-[10px] ${health.gemini_status === 'connected' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    {health.gemini_status === 'connected' ? (
+                  <span className="text-[9px] text-slate-500 uppercase font-medium">
+                    Gemini Status
+                  </span>
+                  <span
+                    className={`font-bold mt-0.5 flex items-center gap-1 text-[10px] ${health.gemini_status === "connected" ? "text-emerald-400" : "text-rose-400"}`}
+                  >
+                    {health.gemini_status === "connected" ? (
                       <>
                         <CheckCircle className="w-3 h-3 shrink-0 text-emerald-400" />
                         Connected
@@ -205,7 +253,9 @@ export const SidebarInputs: React.FC = () => {
                   </span>
                 </div>
                 <div className="bg-[#0a0f18] p-1.5 rounded border border-white/5 flex flex-col justify-between">
-                  <span className="text-[9px] text-slate-500 uppercase font-medium">Cache Mode</span>
+                  <span className="text-[9px] text-slate-500 uppercase font-medium">
+                    Cache Mode
+                  </span>
                   <span className="text-indigo-300 font-bold mt-0.5 flex items-center gap-1 text-[10px]">
                     <Zap className="w-3 h-3 text-amber-400 shrink-0" />
                     {health.cache?.redis?.connected ? "Redis Cluster" : "Memory Cache"}
@@ -224,16 +274,21 @@ export const SidebarInputs: React.FC = () => {
                 <div className="flex justify-between text-slate-400 text-[10px]">
                   <span>Cache Hits (Redis / Mem):</span>
                   <span className="text-slate-200 font-mono">
-                    {health.cache?.stats?.totalHits} ({health.cache?.stats?.redisHits} / {health.cache?.stats?.memoryHits})
+                    {health.cache?.stats?.totalHits} ({health.cache?.stats?.redisHits} /{" "}
+                    {health.cache?.stats?.memoryHits})
                   </span>
                 </div>
                 <div className="flex justify-between text-slate-400 text-[10px]">
                   <span>Cache Misses:</span>
-                  <span className="text-slate-200 font-mono">{health.cache?.stats?.totalMisses}</span>
+                  <span className="text-slate-200 font-mono">
+                    {health.cache?.stats?.totalMisses}
+                  </span>
                 </div>
                 <div className="flex justify-between text-slate-400 text-[10px]">
                   <span>คีย์แคชในระบบ:</span>
-                  <span className="text-slate-200 font-mono">{health.cache?.memory?.entriesCount} entries</span>
+                  <span className="text-slate-200 font-mono">
+                    {health.cache?.memory?.entriesCount} entries
+                  </span>
                 </div>
               </div>
 
@@ -254,11 +309,13 @@ export const SidebarInputs: React.FC = () => {
                   </div>
                   <div className="flex justify-between items-center text-slate-400 text-[10px]">
                     <span>อัตรา Error ของ Gemini:</span>
-                    <span className={`font-mono font-bold px-1.5 py-0.5 rounded ${
-                      health.metrics.geminiErrors > 0 
-                        ? "text-rose-400 bg-rose-500/10" 
-                        : "text-slate-300 bg-slate-500/10"
-                    }`}>
+                    <span
+                      className={`font-mono font-bold px-1.5 py-0.5 rounded ${
+                        health.metrics.geminiErrors > 0
+                          ? "text-rose-400 bg-rose-500/10"
+                          : "text-slate-300 bg-slate-500/10"
+                      }`}
+                    >
                       {health.metrics.geminiErrorRate}
                     </span>
                   </div>

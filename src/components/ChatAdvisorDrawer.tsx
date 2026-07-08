@@ -3,17 +3,12 @@ import { Award, Send, Loader2 } from "lucide-react";
 import { useAppContext } from "../hooks/useAppContext";
 
 export const ChatAdvisorDrawer: React.FC = () => {
-  const { 
-    state, 
-    dispatch, 
-    handleSendMessage, 
-    messagesEndRef 
-  } = useAppContext();
+  const { state, dispatch, handleSendMessage, messagesEndRef } = useAppContext();
 
   const { chatOpen, messages, newMessage, chatLoading, report } = state;
 
   return (
-    <aside 
+    <aside
       id="chat_advisor_drawer"
       className={`fixed inset-y-16 right-0 w-full sm:w-[450px] bg-[#05070a]/95 border-l border-white/10 z-40 flex flex-col shadow-2xl transition-all duration-300 transform ${
         chatOpen ? "translate-x-0" : "translate-x-full"
@@ -26,12 +21,16 @@ export const ChatAdvisorDrawer: React.FC = () => {
             <Award className="w-4 h-4 text-emerald-400" />
           </div>
           <div>
-            <h4 className="font-bold text-xs text-white uppercase tracking-wider">ห้องปรึกษาที่ปรึกษาไอทีระดับองค์กร (Lead IT Architect)</h4>
-            <p className="text-[9px] text-slate-500">ตอบกลับเชิงวิศวกรรมซอฟต์แวร์และการจัดการคลาวด์</p>
+            <h4 className="font-bold text-xs text-white uppercase tracking-wider">
+              ห้องปรึกษาที่ปรึกษาไอทีระดับองค์กร (Lead IT Architect)
+            </h4>
+            <p className="text-[9px] text-slate-500">
+              ตอบกลับเชิงวิศวกรรมซอฟต์แวร์และการจัดการคลาวด์
+            </p>
           </div>
         </div>
-        
-        <button 
+
+        <button
           onClick={() => dispatch({ type: "TOGGLE_CHAT" })}
           className="text-slate-400 hover:text-white text-xs font-bold px-2 py-1 rounded hover:bg-white/5"
         >
@@ -42,14 +41,14 @@ export const ChatAdvisorDrawer: React.FC = () => {
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-black/25">
         {messages.map((msg, idx) => (
-          <div 
-            key={idx} 
+          <div
+            key={idx}
             className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}
           >
-            <div 
+            <div
               className={`max-w-[85%] rounded-xl p-3.5 text-xs leading-relaxed whitespace-pre-wrap ${
-                msg.sender === "user" 
-                  ? "bg-indigo-600 text-white rounded-br-none shadow-md shadow-indigo-600/15" 
+                msg.sender === "user"
+                  ? "bg-indigo-600 text-white rounded-br-none shadow-md shadow-indigo-600/15"
                   : "bg-[#0c121e] border border-white/10 text-slate-200 rounded-bl-none"
               }`}
             >
@@ -58,7 +57,7 @@ export const ChatAdvisorDrawer: React.FC = () => {
             <span className="text-[9px] text-slate-500 mt-1 font-mono">{msg.time}</span>
           </div>
         ))}
-        
+
         {chatLoading && (
           <div className="flex items-center gap-2 text-xs text-slate-400 bg-white/5 border border-white/5 rounded-xl p-3.5 self-start w-[80%]">
             <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400" />
@@ -71,25 +70,37 @@ export const ChatAdvisorDrawer: React.FC = () => {
       {/* Chat Quick Queries Suggestion */}
       {report && (
         <div className="px-4 py-2 bg-slate-900/60 border-t border-white/5 flex flex-wrap gap-1.5 overflow-x-auto shrink-0">
-          <button 
+          <button
             onClick={() => {
-              dispatch({ type: "SET_NEW_MESSAGE", value: "ขอตัวอย่างไฟล์สคริปต์ Terraform เบื้องต้นสำหรับสปอนเซอร์สถาปัตยกรรมนี้หน่อยครับ" });
+              dispatch({
+                type: "SET_NEW_MESSAGE",
+                value:
+                  "ขอตัวอย่างไฟล์สคริปต์ Terraform เบื้องต้นสำหรับสปอนเซอร์สถาปัตยกรรมนี้หน่อยครับ",
+              });
             }}
             className="text-[9px] text-indigo-300 hover:text-white bg-indigo-500/10 border border-indigo-500/20 rounded px-2 py-1 font-medium whitespace-nowrap transition-colors"
           >
             📦 ขอสคริปต์ Terraform
           </button>
-          <button 
+          <button
             onClick={() => {
-              dispatch({ type: "SET_NEW_MESSAGE", value: "ช่วยวางกลยุทธ์การสำรองข้อมูลและกู้คืนระบบภัยพิบัติ (Disaster Recovery RTO/RPO) ของระบบนี้อย่างสมบูรณ์แบบครับ" });
+              dispatch({
+                type: "SET_NEW_MESSAGE",
+                value:
+                  "ช่วยวางกลยุทธ์การสำรองข้อมูลและกู้คืนระบบภัยพิบัติ (Disaster Recovery RTO/RPO) ของระบบนี้อย่างสมบูรณ์แบบครับ",
+              });
             }}
             className="text-[9px] text-emerald-300 hover:text-white bg-emerald-500/10 border border-emerald-500/20 rounded px-2 py-1 font-medium whitespace-nowrap transition-colors"
           >
             💾 แผนสำรองกู้ระบบ DR Plan
           </button>
-          <button 
+          <button
             onClick={() => {
-              dispatch({ type: "SET_NEW_MESSAGE", value: "ถ้าต้องการลดต้นทุนเพิ่มอีก 20% โดยยอมรับให้ระบบบางส่วนหน่วงขึ้น ควรพิจารณาปรับโหนดใดเป็นหลักครับ" });
+              dispatch({
+                type: "SET_NEW_MESSAGE",
+                value:
+                  "ถ้าต้องการลดต้นทุนเพิ่มอีก 20% โดยยอมรับให้ระบบบางส่วนหน่วงขึ้น ควรพิจารณาปรับโหนดใดเป็นหลักครับ",
+              });
             }}
             className="text-[9px] text-amber-300 hover:text-white bg-amber-500/10 border border-amber-500/20 rounded px-2 py-1 font-medium whitespace-nowrap transition-colors"
           >
@@ -99,7 +110,10 @@ export const ChatAdvisorDrawer: React.FC = () => {
       )}
 
       {/* Input Form */}
-      <form onSubmit={handleSendMessage} className="p-3 border-t border-white/10 bg-[#080d15] flex gap-2">
+      <form
+        onSubmit={handleSendMessage}
+        className="p-3 border-t border-white/10 bg-[#080d15] flex gap-2"
+      >
         <input
           type="text"
           value={newMessage}
